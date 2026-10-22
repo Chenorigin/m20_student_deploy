@@ -1,0 +1,493 @@
+{
+  "schema_version": 1,
+  "sources": {
+    "reference_url": "https://arcusgit.vip.cpolar.cn/Dawning/m20_pro_perceptive_lidar",
+    "reference_local_checkout": "/home/ubuntu/桌面/m20_pro_perceptive_lidar",
+    "reference_commit": "76cf139ab67cc0bb9ba40990d5a4c0e48ca42de5",
+    "remote_latest_verified": false,
+    "teacher_env_yaml": "/home/ubuntu/cyq_shixi_projects/rl_training/logs/rsl_rl/deeprobotics_m20_quiet_landing_v1/2026-10-10_00-48-58_quiet_landing_v1/params/env.yaml",
+    "sha256": {
+      "/home/ubuntu/cyq_shixi_projects/rl_training/logs/rsl_rl/deeprobotics_m20_quiet_landing_v1/2026-10-10_00-48-58_quiet_landing_v1/params/env.yaml": "53e5347cd56ea59b37fc5ac09fdf21daee6aca0d9d902133e14d36733785c6ae",
+      "/home/ubuntu/桌面/m20_pro_perceptive_lidar/M20_perception_deploy_63d/src/M20_sdk_deploy/run_policy/m20_policy_runner.hpp": "ae08bd34608312c0b936e8c3a4c319cd115e96f6f72820289a6aa95ccb2aa81e",
+      "/home/ubuntu/桌面/m20_pro_perceptive_lidar/M20_perception_deploy_63d/src/M20_sdk_deploy/interface/robot/hardware/m20_interface.hpp": "ab94cffa4b231ec64cf4e477d1541f9bfdf86fa0c1c7101e0678d30f46e98dad",
+      "/home/ubuntu/桌面/m20_pro_perceptive_lidar/M20_perception_deploy_63d/src/M20_sdk_deploy/interface/robot/hardware/dds_interface.hpp": "61d52f68e7e420493e841b0a1bd2d6b03173e35daaad2c02517ee057c7b85f7d",
+      "/home/ubuntu/桌面/m20_pro_perceptive_lidar/M20_perception_deploy_63d/config/m20_superlio_pgtt.yaml": "ff121b2cb21887b3bb9fb0f7eba0948f615e99e801ce4344f19cb3775002f79d"
+    }
+  },
+  "policy": {
+    "dt_s": 0.02,
+    "nominal_joint_servo_dt_s_from_training": 0.005,
+    "decimation_from_training": 4,
+    "normalized_action_clip": [
+      -100.0,
+      100.0
+    ],
+    "processed_target_clip_policy": [
+      [
+        -100.0,
+        100.0
+      ],
+      [
+        -100.0,
+        100.0
+      ],
+      [
+        -100.0,
+        100.0
+      ],
+      [
+        -100.0,
+        100.0
+      ],
+      [
+        -100.0,
+        100.0
+      ],
+      [
+        -100.0,
+        100.0
+      ],
+      [
+        -100.0,
+        100.0
+      ],
+      [
+        -100.0,
+        100.0
+      ],
+      [
+        -100.0,
+        100.0
+      ],
+      [
+        -100.0,
+        100.0
+      ],
+      [
+        -100.0,
+        100.0
+      ],
+      [
+        -100.0,
+        100.0
+      ],
+      [
+        -100.0,
+        100.0
+      ],
+      [
+        -100.0,
+        100.0
+      ],
+      [
+        -100.0,
+        100.0
+      ],
+      [
+        -100.0,
+        100.0
+      ]
+    ],
+    "previous_action": "previous issued normalized 16D action; not mapped joint target",
+    "runtime_noise_injection": false
+  },
+  "observation": {
+    "scales": {
+      "base_ang_vel": 0.25,
+      "projected_gravity": 1.0,
+      "velocity_commands": 1.0,
+      "joint_pos": 1.0,
+      "joint_vel": 0.05,
+      "actions": 1.0
+    },
+    "clip": [
+      -100.0,
+      100.0
+    ],
+    "wheel_positions_zero": true
+  },
+  "joints": {
+    "policy_order": [
+      "fl_hipx_joint",
+      "fl_hipy_joint",
+      "fl_knee_joint",
+      "fr_hipx_joint",
+      "fr_hipy_joint",
+      "fr_knee_joint",
+      "hl_hipx_joint",
+      "hl_hipy_joint",
+      "hl_knee_joint",
+      "hr_hipx_joint",
+      "hr_hipy_joint",
+      "hr_knee_joint",
+      "fl_wheel_joint",
+      "fr_wheel_joint",
+      "hl_wheel_joint",
+      "hr_wheel_joint"
+    ],
+    "sdk_order": [
+      "fl_hipx_joint",
+      "fl_hipy_joint",
+      "fl_knee_joint",
+      "fl_wheel_joint",
+      "fr_hipx_joint",
+      "fr_hipy_joint",
+      "fr_knee_joint",
+      "fr_wheel_joint",
+      "hl_hipx_joint",
+      "hl_hipy_joint",
+      "hl_knee_joint",
+      "hl_wheel_joint",
+      "hr_hipx_joint",
+      "hr_hipy_joint",
+      "hr_knee_joint",
+      "hr_wheel_joint"
+    ],
+    "policy_from_sdk_indices": [
+      0,
+      1,
+      2,
+      4,
+      5,
+      6,
+      8,
+      9,
+      10,
+      12,
+      13,
+      14,
+      3,
+      7,
+      11,
+      15
+    ],
+    "sdk_from_policy_indices": [
+      0,
+      1,
+      2,
+      12,
+      3,
+      4,
+      5,
+      13,
+      6,
+      7,
+      8,
+      14,
+      9,
+      10,
+      11,
+      15
+    ],
+    "default_position_policy_rad": [
+      0.0,
+      -0.3,
+      0.6,
+      0.0,
+      -0.3,
+      0.6,
+      0.0,
+      0.3,
+      -0.6,
+      0.0,
+      0.3,
+      -0.6,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "action_scale_policy": [
+      0.125,
+      0.25,
+      0.25,
+      0.125,
+      0.25,
+      0.25,
+      0.125,
+      0.25,
+      0.25,
+      0.125,
+      0.25,
+      0.25,
+      5.0,
+      5.0,
+      5.0,
+      5.0
+    ],
+    "kp_sdk": [
+      80.0,
+      80.0,
+      80.0,
+      0.0,
+      80.0,
+      80.0,
+      80.0,
+      0.0,
+      80.0,
+      80.0,
+      80.0,
+      0.0,
+      80.0,
+      80.0,
+      80.0,
+      0.0
+    ],
+    "kd_sdk": [
+      2.0,
+      2.0,
+      2.0,
+      0.6,
+      2.0,
+      2.0,
+      2.0,
+      0.6,
+      2.0,
+      2.0,
+      2.0,
+      0.6,
+      2.0,
+      2.0,
+      2.0,
+      0.6
+    ],
+    "sdk_direction": [
+      1.0,
+      1.0,
+      -1.0,
+      1.0,
+      1.0,
+      -1.0,
+      1.0,
+      -1.0,
+      -1.0,
+      1.0,
+      -1.0,
+      1.0,
+      -1.0,
+      -1.0,
+      1.0,
+      -1.0
+    ],
+    "sdk_initial_offset_deg": [
+      -25.0,
+      -131.0,
+      160.0,
+      0.0,
+      25.0,
+      -131.0,
+      160.0,
+      0.0,
+      -25.0,
+      131.0,
+      -160.0,
+      0.0,
+      25.0,
+      131.0,
+      -160.0,
+      0.0
+    ],
+    "offset_wrap_rule": "reference M20Interface.ResetPositionOffset may adjust hipy/knee offsets by +/-360 degrees; use effective SDK values",
+    "state_formula": "q_model_sdk=q_raw*direction+offset_rad; dq_model_sdk=dq_raw*direction",
+    "command_formula": "q_raw=(q_target_model_sdk-offset_rad)*direction; dq_raw=dq_target_model_sdk*direction",
+    "sdk_api_already_applies_offset_direction": true,
+    "reference_legacy_default_position_policy_rad": [
+      0.0,
+      -0.6,
+      1.0,
+      0.0,
+      -0.6,
+      1.0,
+      0.0,
+      0.6,
+      -1.0,
+      0.0,
+      0.6,
+      -1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "reference_default_is_used": false
+  },
+  "hardware": {
+    "joint_state_topic": "/JOINTS_DATA",
+    "joint_state_type": "drdds/msg/JointsData",
+    "joint_command_topic": "/JOINTS_CMD",
+    "joint_command_type": "drdds/msg/JointsDataCmd",
+    "direct_imu_topic": "/IMU",
+    "direct_imu_type": "sensor_msgs/msg/Imu",
+    "bridged_imu_topic": "/M20_IMU_BRIDGE",
+    "bridged_imu_type": "drdds/msg/ImuData",
+    "bridged_rpy_unit": "degrees; convert once to radians",
+    "direct_quaternion_order": "xyzw",
+    "control_word_motor_control": 4,
+    "sdk_command_matrix_columns": [
+      "kp",
+      "position",
+      "kd",
+      "velocity",
+      "torque_ff"
+    ],
+    "sdk_lifecycle_can_publish_commands": true,
+    "limits_verified_on_hardware": false,
+    "joint_position_limits_sdk_rad": null,
+    "joint_velocity_limits_sdk_rad_s": null,
+    "software_position_limits_sdk_rad": [
+      [
+        -0.4363,
+        0.4363
+      ],
+      [
+        -2.443,
+        2.443
+      ],
+      [
+        -2.758,
+        2.758
+      ],
+      [
+        -100,
+        100
+      ],
+      [
+        -0.4363,
+        0.4363
+      ],
+      [
+        -2.443,
+        2.443
+      ],
+      [
+        -2.758,
+        2.758
+      ],
+      [
+        -100,
+        100
+      ],
+      [
+        -0.4363,
+        0.4363
+      ],
+      [
+        -2.443,
+        2.443
+      ],
+      [
+        -2.758,
+        2.758
+      ],
+      [
+        -100,
+        100
+      ],
+      [
+        -0.4363,
+        0.4363
+      ],
+      [
+        -2.443,
+        2.443
+      ],
+      [
+        -2.758,
+        2.758
+      ],
+      [
+        -100,
+        100
+      ]
+    ],
+    "software_velocity_limits_sdk_rad_s": [
+      2.5,
+      2.5,
+      2.5,
+      50,
+      2.5,
+      2.5,
+      2.5,
+      50,
+      2.5,
+      2.5,
+      2.5,
+      50,
+      2.5,
+      2.5,
+      2.5,
+      50
+    ],
+    "software_limit_source": "Offline wheel-only candidate: pre-instability recorded maximum wheel request plus10 percent, rounded up to5rad/s; bounded by recorded training and reference SDK values. Existing leg target-slew and position bounds retained. Not hardware validated."
+  },
+  "training_limits": {
+    "leg_effort_nm": 76.4,
+    "wheel_effort_nm": 21.6,
+    "leg_velocity_rad_s": 22.4,
+    "wheel_velocity_rad_s": 79.3
+  },
+  "command_training_ranges": {
+    "lin_vel_x": [
+      -2.0,
+      2.0
+    ],
+    "lin_vel_y": [
+      -1.0,
+      1.0
+    ],
+    "ang_vel_z": [
+      -2.0,
+      2.0
+    ]
+  },
+  "pending": [
+    "actual AOS/GOS topic/frame/DDS and synchronized timestamps",
+    "LiDAR-to-base and IMU-to-base measured extrinsics; self filter geometry",
+    "world-to-trained-base odometry provider and child-frame adaptation",
+    "per-point timestamp field/unit/header start-end semantics",
+    "real sensor and relative pose covariance calibration",
+    "SDK effective offsets, hardware hard limits and control takeover/exit procedure",
+    "GOS ARM processing budget under actual co-resident load"
+  ],
+  "candidate_metadata": {
+    "offline_only": true,
+    "active_wrapper_uses": "deploy/robot.json",
+    "not_referenced_by_startup_wrapper": true,
+    "baseline_robot_sha256": "8392faee41aeed075d78c11d79cafafe2a175ed4af6d8937e1fa9c2c4419faea",
+    "baseline_velocity_values": [
+      2.5,
+      2.5,
+      2.5,
+      10.0,
+      2.5,
+      2.5,
+      2.5,
+      10.0,
+      2.5,
+      2.5,
+      2.5,
+      10.0,
+      2.5,
+      2.5,
+      2.5,
+      10.0
+    ],
+    "changed_wheel_sdk_indices": [
+      3,
+      7,
+      11,
+      15
+    ],
+    "leg_limits_changed": false,
+    "data_source": "evidence/migration_20261016/aos_terrain_hold_off_control_trace.jsonl",
+    "analysis_window": "first7.08s before pitch crossed3deg; fixed recorded requests, not closed-loop replay",
+    "analysis_rows": 355,
+    "maximum_recorded_wheel_request_rad_s": 43.22855472564697,
+    "candidate_formula": "ceil(maximum*1.10/5)*5",
+    "candidate_wheel_limit_rad_s": 50,
+    "recorded_requests_clipped_old": 129,
+    "recorded_requests_clipped_candidate": 0,
+    "root_cause_or_stability_proven": false,
+    "hardware_speed_increase_requires_explicit_operator_authorization": true
+  }
+}

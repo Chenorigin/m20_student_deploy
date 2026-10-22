@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>m20_student_sdk</name><version>0.1.0</version>
+  <description>M20 student model adapter for the operator-started official SDK FSM</description>
+  <maintainer email="maintainer@example.com">M20 deployment</maintainer><license>Proprietary</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>rclcpp</depend><depend>drdds</depend><depend>sensor_msgs</depend><depend>std_msgs</depend><depend>m20_heightmap_msgs</depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>

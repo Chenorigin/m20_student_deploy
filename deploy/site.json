@@ -1,0 +1,59 @@
+{
+  "factory_installation_confirmed_by_operator": true,
+  "factory_candidate_requires_static_check": true,
+  "pose_adapter": {
+    "factory_installation_confirmed": true,
+    "input_topic": "/m20/lio/imu_odom",
+    "input_world_frame": "world",
+    "input_child_frame": "",
+    "output_topic": "/m20/base/odom",
+    "output_world_frame": "world",
+    "output_base_frame": "base_link",
+    "imu_position_base_m": [
+      0.0632,
+      -0.0268,
+      -0.0435
+    ],
+    "imu_to_base_xyzw": [
+      0,
+      0,
+      0,
+      1
+    ],
+    "pose_std": [
+      0.015,
+      0.015,
+      0.01,
+      0.01,
+      0.01,
+      0.01
+    ]
+  },
+  "lio_binary": "/home/user/staircase_gos_ws/lio_release/bin/super_lio_node",
+  "lio_library_dir": "/home/user/staircase_gos_ws/lio_release/lib",
+  "lio_binary_sha256": "026a1f842202fba6873e8e1cee11df41ea86b7cec7ac80290336849ae1b68c58",
+  "frame_evidence": "Super-LIO high-rate IMU prediction publishes world with empty child; explicit lever-arm adapter; factory translation is a candidate requiring static and moving verification",
+  "lidar_visibility": {
+    "horizontal_fov_deg": 135.0,
+    "sensors": [
+      {
+        "position_base_m": [
+          0.32028,
+          0.0,
+          -0.013
+        ],
+        "yaw_rad": 0.0
+      },
+      {
+        "position_base_m": [
+          -0.32028,
+          0.0,
+          -0.013
+        ],
+        "yaw_rad": 3.141592653589793
+      }
+    ]
+  },
+  "lio_library_sha256": "d6a128b1fd2310b3e193a7937cd7e0b7f2a26caa0db69f2517daf2982d6cf488",
+  "lio_basic_library_sha256": "e3757024b53af545c21ecf181b2fa90a0a794d262b68e7560f1d85ff7c9f6f26"
+}

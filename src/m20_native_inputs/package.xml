@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>m20_native_inputs</name><version>0.1.0</version>
+  <description>Read-only native DDS input from the GOS factory lidar decoder</description>
+  <maintainer email="maintainer@example.com">M20 deployment</maintainer><license>Apache-2.0</license>
+  <buildtool_depend>ament_cmake</buildtool_depend><depend>drdds</depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>

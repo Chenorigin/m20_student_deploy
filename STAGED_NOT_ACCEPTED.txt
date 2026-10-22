@@ -1,0 +1,1 @@
+Student v3.5 independent candidate. Board build, numerical parity and current commissioning required before operator control. No physical trial has been performed.

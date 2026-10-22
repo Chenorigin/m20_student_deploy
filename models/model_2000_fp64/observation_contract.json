@@ -1,0 +1,152 @@
+{
+  "version": "m20_student_v1",
+  "student_observation_dim": 789,
+  "teacher_observation_dim": 244,
+  "action_dim": 16,
+  "channels": [
+    "proprio",
+    "height",
+    "validity",
+    "confidence",
+    "past_proprio"
+  ],
+  "slices": {
+    "proprio": [
+      0,
+      57
+    ],
+    "height": [
+      57,
+      244
+    ],
+    "validity": [
+      244,
+      431
+    ],
+    "confidence": [
+      431,
+      618
+    ],
+    "past_proprio": [
+      618,
+      789
+    ]
+  },
+  "grid": {
+    "rows_y": 11,
+    "columns_x": 17,
+    "resolution_m": 0.1,
+    "x_range_m": [
+      -0.8,
+      0.8
+    ],
+    "y_range_m": [
+      -0.5,
+      0.5
+    ],
+    "order": "y rows, x columns, ascending",
+    "alignment": "gravity aligned, robot yaw"
+  },
+  "height": {
+    "formula": "clip(base_z - terrain_z - offset, min, max)",
+    "offset_m": 0.5,
+    "clip": [
+      -1.0,
+      1.0
+    ]
+  },
+  "unknown": {
+    "height": 0.0,
+    "validity": 0.0,
+    "confidence": 0.0
+  },
+  "confidence": "m * exp(-cell_age/tau) / (1 + effective_variance/ref_std**2)",
+  "confidence_is_calibrated_probability": false,
+  "normalization": "teacher proprio scales retained; no running observation normalization",
+  "actions": "12 leg position residuals, then 4 wheel velocity commands; teacher scaling retained",
+  "history_steps": 4,
+  "policy_dt_s": 0.02,
+  "previous_action": "previous issued action, before actuator delay",
+  "effective_variance": "height + correlated height + relative pose + roll/pitch + cell-age growth",
+  "map_state": "rolling gravity/yaw grid; observed cells retain individual capture timestamps",
+  "history": "past noisy proprio only; oldest to newest; zero padded on reset; current proprio first",
+  "deployment_family": "m20_student_v3_5",
+  "command_feedback": {
+    "version": "legacy_v1_v3_5",
+    "tuning": {
+      "translation_threshold": 0.1,
+      "yaw_threshold": 0.1,
+      "heading_hold_kp": 0.8,
+      "heading_hold_kd": 0.4,
+      "heading_hold_max_yaw_rate": 0.25,
+      "heading_hold_deadband": 0.008726646259971648,
+      "stair_heading_hold_kp": 1.6,
+      "stair_heading_hold_kd": 0.7,
+      "stair_heading_hold_max_yaw_rate": 0.5,
+      "stair_heading_hold_deadband": 0.008726646259971648,
+      "heading_hold_rate_enter": 0.03
+    }
+  },
+  "perception": {
+    "level": 1.0,
+    "clean_probability": 0.0,
+    "stress_probability": 0.0,
+    "stress_multiplier": 2.0,
+    "lidar_horizontal_fov_deg": 135.0,
+    "front_only": true,
+    "front_blind_distance_m": 0.0,
+    "front_sensor_offset_m": [
+      0.32028,
+      0.0,
+      -0.013
+    ],
+    "rear_sensor_offset_m": [
+      -0.1,
+      0.0,
+      0.15
+    ],
+    "lidar_min_range_m": 0.05,
+    "lidar_max_range_m": 5.0,
+    "vertical_fov_min_deg": -90.0,
+    "vertical_fov_max_deg": 90.0,
+    "terrain_visibility": true,
+    "visibility_samples": 16,
+    "visibility_tolerance_m": 0.015,
+    "map_update_period_s": 0.1,
+    "update_jitter_s": 0.02,
+    "min_delay_s": 0.28,
+    "max_delay_s": 0.42,
+    "max_map_age_s": 0.5,
+    "packet_dropout": 0.05,
+    "burst_probability": 0.02,
+    "burst_duration_s": 0.3,
+    "point_dropout": 0.03,
+    "occlusion_probability": 0.3,
+    "occlusion_width_m": 0.4,
+    "occlusion_height_m": 0.3,
+    "occlusion_hold_s": 0.5,
+    "height_noise_std": 0.01,
+    "height_bias_std": 0.015,
+    "correlated_height_std": 0.01,
+    "map_artifact_probability": 0.03,
+    "map_artifact_height_std": 0.05,
+    "xy_bias_std": 0.015,
+    "yaw_bias_std": 0.01,
+    "pose_drift_xy_std": 0.015,
+    "pose_drift_yaw_std": 0.01,
+    "drift_time_constant_s": 2.0,
+    "roll_pitch_std": 0.01,
+    "gyro_std_rad_s": 0.015,
+    "gyro_bias_std_rad_s": 0.005,
+    "joint_position_std_rad": 0.002,
+    "joint_velocity_std_rad_s": 0.05,
+    "action_delay_steps": 1,
+    "variance_growth_per_s": 0.001,
+    "confidence_reference_std": 0.05,
+    "confidence_age_tau_s": 0.5,
+    "confidence_step_ambiguity_weight": 0.0,
+    "confidence_log_std": 0.0,
+    "confidence_overestimate_probability": 0.0,
+    "confidence_overestimate_factor": 0.25
+  }
+}

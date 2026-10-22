@@ -1,0 +1,9 @@
+{
+  "onnx_frames": 160,
+  "gaussian_original_export_frames": 32,
+  "representative_abi_frames": 128,
+  "heading_scenarios": 24,
+  "commands": 0,
+  "historical_v3_frames": 8587,
+  "historical_capture_scope": "Oct17 v3 observations replayed into v3.5 model; numerical check only"
+}

@@ -1,0 +1,103 @@
+{
+  "profile": "v0",
+  "history_steps": 1,
+  "calibration_confirmed": false,
+  "pose_mode": "odometry",
+  "topics": {
+    "cloud": "/LIDAR/POINTS",
+    "odom": "/m20/base/odom",
+    "imu": "/IMU",
+    "terrain": "/m20/terrain/observation",
+    "proprio": "/m20/proprioception",
+    "policy": "/m20/policy/observation",
+    "status": "/m20/heightmap/status"
+  },
+  "frames": {
+    "world": "odom",
+    "base": "base_link",
+    "imu": "imu_link",
+    "output": "base_yaw"
+  },
+  "lidar_extrinsics": {
+    "REPLACE_WITH_REAL_CLOUD_FRAME": {
+      "translation_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "quaternion_xyzw": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    }
+  },
+  "imu_to_base_xyzw": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+  ],
+  "self_filter_boxes": [],
+  "estimator": {
+    "range_std_m": 0.01,
+    "range_quadratic": 0.001,
+    "angular_std_rad": 0.002,
+    "common_height_std_m": 0.015,
+    "correlated_height_std_m": 0.01,
+    "min_points": 5,
+    "max_points_per_cell": 128,
+    "max_effective_samples": 8,
+    "min_xy_spread_m": 0.008,
+    "max_extrapolation_m": 0.025,
+    "max_slope": 2.0,
+    "max_residual_m": 0.035,
+    "layer_gap_m": 0.08,
+    "minority_fraction": 0.2,
+    "outlier_floor_m": 0.025,
+    "max_map_age_s": 0.3,
+    "confidence_reference_std": 0.05,
+    "confidence_age_tau_s": 0.5,
+    "variance_growth_per_s": 0.001,
+    "max_packets": 32,
+    "min_range_m": 0.05,
+    "max_range_m": 5.0,
+    "min_relative_z_m": -1.5,
+    "max_relative_z_m": 0.5
+  },
+  "runtime": {
+    "publish_hz": 50.0,
+    "max_cloud_points": 200000,
+    "max_cloud_bytes": 16000000,
+    "pose_buffer_size": 256,
+    "pose_max_gap_s": 0.06,
+    "input_timeout_s": 0.2,
+    "future_tolerance_s": 0.005,
+    "scan_duration_s": 0.1,
+    "point_time_field": "",
+    "point_time_scale_s": 1.0,
+    "deskew_bin_s": 0.005,
+    "pose_std": [
+      0.015,
+      0.015,
+      0.01,
+      0.01,
+      0.01,
+      0.01
+    ],
+    "max_pose_speed_m_s": 3.0,
+    "max_pose_rate_rad_s": 6.0,
+    "imu_hold_s": 0.04,
+    "undeskewed_speed_floor_m_s": 0.1,
+    "undeskewed_rate_floor_rad_s": 0.1,
+    "scan_stamp_reference": "end"
+  },
+  "aos": {
+    "model_contract": "",
+    "model_path": "",
+    "max_alignment_age_s": 0.06,
+    "max_proprio_age_s": 0.04,
+    "min_valid_fraction": 0.15
+  }
+}

@@ -1,0 +1,57 @@
+/**:
+  ros__parameters:
+    lio.eva.timer: true
+    lio.extrinsic.lidar_imu:
+    - -0.0632
+    - 0.0268
+    - 0.0435
+    - 1.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    lio.extrinsic.odom_robo:
+    - 0.0632
+    - -0.0268
+    - -0.0435
+    - 0.0
+    - 0.0
+    - 0.0
+    lio.hash_map.hash_capacity: 2000000
+    lio.hash_map.vox_resolution: 0.5
+    lio.kf.kf_align_gravity: true
+    lio.kf.kf_max_iterations: 4
+    lio.kf.kf_quit_eps: 0.001
+    lio.kf.kf_type: 0
+    lio.map.ds_size: 0.25
+    lio.map.if_filter: true
+    lio.map.map_name: map.pcd
+    lio.map.save_interval: 500
+    lio.map.save_map: false
+    lio.map.save_map_dir: map
+    lio.output.dense: true
+    lio.output.map: false
+    lio.output.ml_map: false
+    lio.output.plan_env_body: false
+    lio.output.plan_env_world: false
+    lio.output.planner: false
+    lio.output.pub_step: 1
+    lio.output.robot: false
+    lio.ros.imu_topic: /m20/gos/imu
+    lio.ros.lidar_topic: /m20/gos/points
+    lio.sensor.blind: 0.4
+    lio.sensor.enable_downsample: true
+    lio.sensor.filter_rate: 3
+    lio.sensor.gravity_norm: 9.7946
+    lio.sensor.imu_na: 0.1
+    lio.sensor.imu_nba: 0.0001
+    lio.sensor.imu_nbg: 0.0001
+    lio.sensor.imu_ng: 0.1
+    lio.sensor.imu_type: 0
+    lio.sensor.lidar_type: 7
+    lio.sensor.maxrange: 60.0
+    lio.sensor.voxel_fliter_size: 0.5

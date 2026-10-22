@@ -1,0 +1,48 @@
+{
+  "profile": "v1",
+  "input_shape": [
+    1,
+    789
+  ],
+  "output_shape": [
+    1,
+    16
+  ],
+  "input_name": "obs",
+  "output_name": "actions",
+  "opset": 17,
+  "providers": [
+    "CPUExecutionProvider"
+  ],
+  "policy_sha256": "58694c118ae027f1b462dfb295c8ce6454f5c3c736710beca16564b9542bb64b",
+  "torchscript_sha256": "34b3777c8ef7ca7c92cffbf1199099e566a5799f59b5d4b326b0806da5bb09aa",
+  "source_model_sha256": "34b3777c8ef7ca7c92cffbf1199099e566a5799f59b5d4b326b0806da5bb09aa",
+  "source_model_format": "torchscript",
+  "source_onnx_sha256": "f0529553904ea43361bf264ab4c8604c4be71119e7ff667a6cdf637988c51537",
+  "linear_precision": "float64",
+  "precision": {
+    "version": 1,
+    "linear_compute_dtype": "float64",
+    "parameter_source_dtype": "float32",
+    "parameter_storage_dtype": "float64",
+    "parameter_values": "original float32 values preserved exactly",
+    "linear_output_dtype": "float32",
+    "activation": "ELU alpha=1 in float32",
+    "external_input_dtype": "float32",
+    "external_output_dtype": "float32",
+    "rounding": "float32 after every linear layer, before activation",
+    "source_onnx_sha256": "f0529553904ea43361bf264ab4c8604c4be71119e7ff667a6cdf637988c51537"
+  },
+  "hidden_dims": [
+    512,
+    256,
+    128
+  ],
+  "contract_sha256": "b905cb82c62d1f14bcd1d508b7c99fd96917687b92aaf91bd2fba93b639537a2",
+  "robot_training_contract_sha256": "2d1d5df1dd89b5a46075deb0909e24a67aa40236ba1725be71620d9a8711e3ac",
+  "parity_samples": 32,
+  "parity_atol": 2e-05,
+  "parity_rtol": 2e-05,
+  "max_abs_error": 0.0001220703125,
+  "scope": "CPU numerical export parity, not robot closed-loop"
+}
