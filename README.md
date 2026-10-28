@@ -1,5 +1,7 @@
 # M20 Student 模型部署工作区
 
+2026-10-28 策略更新：已退出原策略并启动当前连续运动 CTS run 的 model_1000；两板实际 ARM/元数据及原启动门禁通过，地图扩边保留。具体模型、进程、日志和首次磁盘门槛失败的处理见 [本次启动报告](../rl_training/logs/evaluation/cts_latest_policy_20261028/report.md)。保持既有 nominal_pd 执行方式，运动效果由现场验证。
+
 2026-10-28：已通过 1515 向现场 AOS/GOS 当前 release 同步扩展采集缓存并重启纯感知，模型权重和 187 点输出接口保留。真实跨板收件、资源和边界见 [部署验证报告](../rl_training/logs/evaluation/cts_hardware_capture_20261028/report.md)。配置哈希已变化，原 commissioning 凭据未改写；重进 SDK 前须退出旧策略进程并按原流程重新确认。静态存在真实缺测，动态抬腿效果未验证。
 
 新增 CTS 架构支持，使用完整学生 encoder＋共享 decoder 和独立原始命令输入。

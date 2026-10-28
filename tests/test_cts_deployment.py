@@ -202,7 +202,7 @@ def test_dual_input_gate_and_embedded_control(metadata, tmp_path):
         CTSInference(tmp_path / "policy.onnx", sidecar)
 
 
-@pytest.mark.parametrize("version", ["m20_cts_action_latent_v2", "m20_cts_action_latent_v8"])
+@pytest.mark.parametrize("version", ["m20_cts_action_latent_v2", "m20_cts_action_latent_v8", "m20_cts_action_latent_v10"])
 def test_supported_training_versions_preserve_execution_guards(metadata, tmp_path, version):
     metadata["cts_version"] = version
     path = tmp_path / "contract.json"

@@ -11,8 +11,8 @@ import numpy as np
 
 FAMILY = "m20_cts_student"
 VERSION = "m20_cts_action_latent_v2"
-# v8 changes training curriculum; the validated nominal inference ABI is unchanged.
-SUPPORTED_VERSIONS = (VERSION, "m20_cts_action_latent_v8")
+# Validated v8/v10 training changes preserve the nominal inference ABI.
+SUPPORTED_VERSIONS = (VERSION, "m20_cts_action_latent_v8", "m20_cts_action_latent_v10")
 INPUTS = {"obs": [1, 789], "raw_command": [1, 3]}
 HARDWARE_REASON = ("CTS requires mandatory StairQuiet landing control at every 5ms substep; "
                    "the SDK has no validated contact/actuator binding. Hardware startup is blocked. "
