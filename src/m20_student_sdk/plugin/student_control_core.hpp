@@ -9,6 +9,7 @@ class StudentControlCore {
   nlohmann::json robot_;
   types::RobotAction last_;
   bool seeded_=false,latched_=false;
+  bool holds_enabled_=true;
   bool leg_target_slew_enabled_=true;
   bool joint_target_position_clip_enabled_=true;
   bool wheel_target_velocity_clip_enabled_=true;
@@ -21,7 +22,18 @@ public:
   explicit StudentControlCore(const nlohmann::json& robot):robot_(robot),
       leg_target_slew_enabled_(robot.at("policy").value("leg_target_slew_enabled",true)),
       joint_target_position_clip_enabled_(robot.at("policy").value("joint_target_position_clip_enabled",true)),
-      wheel_target_velocity_clip_enabled_(robot.at("policy").value("wheel_target_velocity_clip_enabled",true)){}
+      wheel_target_velocity_clip_enabled_(robot.at("policy").value("wheel_target_velocity_clip_enabled",true)){
+    const auto& policy=robot.at("policy");
+    if(policy.contains("hold_enabled")&&!policy.at("hold_enabled").is_boolean())
+      throw std::runtime_error("hold_enabled must be a boolean");
+    holds_enabled_=policy.value("hold_enabled",true);
+  }
+  bool HoldsEnabled()const{return holds_enabled_;}
+  types::RobotAction DiscardCandidateAndSupport(){
+    if(!seeded_)throw std::runtime_error("no standing handoff for discarded servo candidate");
+    candidate_pending_=false;
+    auto target=last_;target.goal_joint_vel.setZero();target.tau_ff.setZero();return target;
+  }
   static void ValidateHandoff(const types::MatXf& command,const nlohmann::json& robot) {
     if(command.rows()!=16||command.cols()!=5||!command.allFinite())throw std::runtime_error("invalid standing handoff shape/value");
     for(int j=0;j<16;++j){
@@ -53,6 +65,7 @@ public:
     }
   }
   types::RobotAction Hold(const std::string& reason) {
+    if(!holds_enabled_)throw std::runtime_error("policy fault with HOLD disabled: "+reason);
     if(!seeded_)throw std::runtime_error("no verified standing handoff for HOLD");
     if(!latched_){latched_=true;reason_=reason;}
     candidate_pending_=false;

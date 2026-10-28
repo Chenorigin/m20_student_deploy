@@ -26,7 +26,7 @@ def load_robot_config(path):
         bounds = np.asarray(cfg["policy"][name])
         if bounds.shape != shape or not np.isfinite(bounds).all() or np.any(bounds[..., 0] >= bounds[..., 1]):
             raise ValueError("Invalid clipping bounds: " + name)
-    for name in ("joint_target_position_clip_enabled", "wheel_target_velocity_clip_enabled"):
+    for name in ("joint_target_position_clip_enabled", "wheel_target_velocity_clip_enabled", "hold_enabled"):
         if name in cfg["policy"] and type(cfg["policy"][name]) is not bool:
             raise ValueError(name + " must be a boolean")
     return cfg

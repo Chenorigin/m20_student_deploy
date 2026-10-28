@@ -42,10 +42,12 @@ struct Fixture {
     MatXf seed=MatXf::Zero(16,5);
     m20_cts::SubstepClock clock;
     RobotAction nominal;
-    explicit Fixture(){
+    explicit Fixture(bool holds=true){
         robot->now=&now;data->ri_ptr=robot;data->uc_ptr=command;
         state=std::make_unique<qw::RLControlState>(RobotName::M20,"offline_real_rl",data);
         policy=Access::Policy(*state);
+        policy->robot["policy"]["hold_enabled"]=holds;
+        policy->core=StudentControlCore(policy->robot);policy->core.RequirePublicationCommit();
         for(int j=0;j<16;j++){
             const int i=policy->robot["joints"]["sdk_from_policy_indices"][j];
             seed(j,0)=policy->robot["joints"]["kp_sdk"][j];
@@ -75,8 +77,42 @@ struct Fixture {
     }
 };
 static void run(const std::string& scenario){
-    Fixture f;
-    if(scenario=="worker_scheduling_failure"){
+    Fixture f(scenario.rfind("nohold_",0)!=0);
+    if(scenario=="nohold_discard_then_fresh_support"){
+        f.policy->on_infer=[&]{f.now=.005;};f.Step(0);f.Unpublished();require(!f.Held(),"expired candidate latched HOLD");
+        f.policy->on_infer=nullptr;f.now=.006;f.Step(1);
+        require(f.robot->publications.size()==1&&f.robot->cached.col(1).isApprox(f.seed.col(1)),"discarded candidate leaked into noninference substep");
+        require(f.PreviousZero()&&f.robot->cached.col(3).isZero()&&f.robot->cached.col(4).isZero(),"recovery support committed discarded Previous/speed");
+        for(int tick=2;tick<=4;++tick){f.now=.001+tick*.005;f.Step(tick);}
+        require(!f.Held()&&f.policy->inferences==2&&f.robot->publications.size()==4,"fresh policy did not resume without catch-up");
+    }else if(scenario=="nohold_late_published_retained"){
+        f.robot->publish_duration=.005;f.Step(0);
+        require(!f.Held()&&f.robot->publications.size()==1,"real late publication lost or latched");
+        const auto issued=f.robot->cached;const auto previous=f.policy->core.Previous();
+        f.robot->publish_duration=0;f.now=.006;f.Step(1);
+        require(f.robot->cached.col(1).isApprox(issued.col(1))&&f.policy->core.Previous()==previous,"late real command was rolled back");
+        require(!f.Held()&&f.robot->cached.col(3).isZero()&&f.robot->cached.col(4).isZero(),"late-publication recovery did not stop wheel/feedforward");
+    }else if(scenario=="nohold_missing_tick_recovers"){
+        f.Step(0);f.now=.015;f.Step(3);
+        require(!f.Held()&&f.robot->publications.size()==1,"missed tick latched or published on expired schedule");
+        f.now=.020;f.Step(4);
+        require(!f.Held()&&f.robot->publications.size()==2&&f.policy->inferences==2,"missed tick recovery caught up or failed");
+    }else if(scenario=="nohold_first_tick_missed"){
+        f.Step(1);f.Unpublished();
+        for(int tick=2;tick<=4;++tick){f.now=(tick-1)*.005;f.Step(tick);}
+        require(!f.Held()&&f.policy->inferences==1&&f.robot->publications.size()==3,"first-miss recovery simulated missing inference");
+    }else if(scenario=="nohold_body_expired"||scenario=="nohold_bad_action"||scenario=="nohold_target_outside_limits"){
+        if(scenario=="nohold_body_expired")f.policy->on_infer=[&]{f.now=.041;};
+        if(scenario=="nohold_bad_action")f.policy->action[0]=NAN;
+        if(scenario=="nohold_target_outside_limits")f.policy->action[0]=100.f;
+        f.Hard([&]{f.Step(0);});f.Unpublished();require(!f.Held(),"hard safety error became a recoverable HOLD");
+    }else if(scenario=="nohold_r2_during_inference"){
+        f.policy->on_infer=[&]{f.now=.005;f.command->GetUserCommand()->target_mode=uint8_t(RobotMotionState::JointDamping);};
+        f.Step(0);f.Unpublished();require(f.state->LoseControlJudge(),"R2 was ignored during noHOLD recovery");
+    }else if(scenario=="nohold_clock_regression"){
+        f.policy->on_infer=[&]{f.now=.005;};f.Step(0);f.Unpublished();
+        f.policy->on_infer=nullptr;f.now=-.001;f.Hard([&]{f.Step(1);});f.Unpublished();
+    }else if(scenario=="worker_scheduling_failure"){
         setenv("M20_CTS_WORKER_CPU","invalid",1);setenv("M20_CTS_WORKER_FIFO_PRIORITY","20",1);
         Access::Worker(*f.state);require(f.state->LoseControlJudge(),"worker scheduling failure did not request safe exit");f.Unpublished();
     }else if(scenario=="healthy_four_substeps"){

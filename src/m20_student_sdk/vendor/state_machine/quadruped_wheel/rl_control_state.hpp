@@ -40,6 +40,8 @@ namespace qw {
         float policy_cost_time_ = 1;
         uint64_t last_publication_sequence_=0;
         double last_cts_step_time_=std::numeric_limits<double>::quiet_NaN();
+        uint64_t timing_discards_=0,late_publications_=0;
+        uint64_t consecutive_discards_=0,max_consecutive_discards_=0;
         struct ServoAudit {
             int selected=-1,live=-1;
             double snapshot=0,start=0,evaluate_end=0,publish_start=0,publish_returned=0,end=0;
@@ -123,7 +125,23 @@ namespace qw {
                 refresh_body();
                 RequireDeadline(generation,start,observation.snapshot_steady_s,now());
                 servo_audit_.outcome=m20_policy_->CTSNominalIsHeld()?"hold published":"policy published";
+                consecutive_discards_=0;
             }catch(const m20_cts::SchedulingFault& error){
+                refresh_body();
+                if(!m20_policy_->CTSHoldsEnabled()){
+                    // Do not issue anything on this expired snapshot. The next
+                    // fresh substep may publish only real last-issued support;
+                    // an unpublished request must never advance action history.
+                    nominal=m20_policy_->DiscardCTSCandidateAndSupport();
+                    clock.DiscardTick(generation,start);
+                    ++timing_discards_;if(servo_audit_.published)++late_publications_;
+                    ++consecutive_discards_;max_consecutive_discards_=std::max(max_consecutive_discards_,consecutive_discards_);
+                    servo_audit_.outcome=std::string(servo_audit_.published?"late publication retained: ":"expired candidate discarded: ")+error.what();
+                    if(timing_discards_==1||timing_discards_%200==0)
+                        std::cerr<<"[CTS_TIMING_DROP] "<<error.what()<<" discarded="<<timing_discards_
+                            <<" late_published="<<late_publications_<<"; next fresh tick may continue"<<std::endl;
+                    servo_audit_.end=now();return;
+                }
                 // Discard staged action; keep the last successful publication.
                 // Never send a replacement on this expired snapshot. The next
                 // fresh generation can publish HOLD without inference/clock.
@@ -148,6 +166,9 @@ namespace qw {
                 row["publish_returned_s"]=servo_audit_.publish_returned;row["worker_decision_end_s"]=servo_audit_.end;
                 row["inferred"]=servo_audit_.inferred;row["published"]=servo_audit_.published;
                 row["publication_sequence"]=last_publication_sequence_;row["outcome"]=servo_audit_.outcome;
+                row["timing_discards"]=timing_discards_;row["late_publications"]=late_publications_;
+                row["consecutive_discards"]=consecutive_discards_;row["max_consecutive_discards"]=max_consecutive_discards_;
+                row["holds_enabled"]=m20_policy_->CTSHoldsEnabled();
                 StudentTrace::Instance().Push(std::move(row));
             }catch(...){}
         }
@@ -269,7 +290,8 @@ namespace qw {
                 exit(0);
             }
             policy_ptr_->DisplayPolicyInfo();
-            if(m20_policy_->IsCTS())std::cout<<"[CTS_SCHEDULING] phase_guard=v3 nominal_successor_overlap="
+            if(m20_policy_->IsCTS())std::cout<<"[CTS_SCHEDULING] phase_guard=v4 holds_enabled="
+                <<(m20_policy_->CTSHoldsEnabled()?"true":"false")<<" nominal_successor_overlap="
                 <<(m20_policy_->UsesLandingControl()?"disabled":"enabled")
                 <<" snapshot_deadline_ms=5 worker_deadline_ms=5"<<std::endl;
         }
@@ -287,6 +309,8 @@ namespace qw {
             policy_fault_.store(false,std::memory_order_release);
             last_publication_sequence_=0;
             last_cts_step_time_=std::numeric_limits<double>::quiet_NaN();
+            timing_discards_=late_publications_=0;
+            consecutive_discards_=max_consecutive_discards_=0;
             policy_ptr_->OnEnter();
             try{m20_policy_->SetStandingHandoff(ri_ptr_->GetJointCommand());}
             catch(const std::exception& error){

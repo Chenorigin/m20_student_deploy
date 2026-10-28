@@ -17,7 +17,7 @@
   "policy": {
     "dt_s": 0.02,
     "leg_target_slew_enabled": false,
-    "terrain_source_session_hold_enabled": true,
+    "terrain_source_session_hold_enabled": false,
     "nominal_joint_servo_dt_s_from_training": 0.005,
     "decimation_from_training": 4,
     "normalized_action_clip": [
@@ -93,7 +93,9 @@
     "previous_action": "previous issued normalized 16D action; not mapped joint target",
     "runtime_noise_injection": false,
     "joint_target_position_clip_enabled": false,
-    "wheel_target_velocity_clip_enabled": false
+    "wheel_target_velocity_clip_enabled": false,
+    "hold_enabled": false,
+    "max_tick_interval_s": 0.03
   },
   "observation": {
     "scales": {
@@ -544,16 +546,16 @@
   },
   "command_operator_ranges": {
     "lin_vel_x": [
-      -1.2,
-      1.2
-    ],
-    "lin_vel_y": [
       -0.7,
       0.7
     ],
+    "lin_vel_y": [
+      -0.5,
+      0.5
+    ],
     "ang_vel_z": [
-      -1.0,
-      1.0
+      -0.6,
+      0.6
     ]
   },
   "reference_alignment": {

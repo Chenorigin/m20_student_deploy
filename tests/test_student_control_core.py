@@ -25,6 +25,7 @@ def test_production_control_core(tmp_path):
     # mode is separately exercised by the reference-alignment C++ probe.
     legacy = json.loads((ROOT / 'deploy/robot.json').read_text())
     legacy['policy'].update(leg_target_slew_enabled=True,
+                            hold_enabled=True,
                             joint_target_position_clip_enabled=True,
                             wheel_target_velocity_clip_enabled=True)
     legacy['hardware']['software_velocity_limits_sdk_rad_s'] = [

@@ -49,7 +49,13 @@ int main(int argc,char** argv){
         terrain->operator_commissioned=true;terrain->geometry_hash=std::getenv("M20_EXPECTED_GEOMETRY_HASH");
         for(int i=0;i<187;++i){terrain->height[i]=frame.at("height")[i];terrain->validity[i]=1;
           terrain->confidence[i]=1;terrain->variance[i]=0;terrain->age[i]=.01f;}
+        const auto terrain_case=frame.value("terrain_case",std::string());
+        if(terrain_case=="wrong_geometry")terrain->geometry_hash=std::string(64,'b');
+        if(terrain_case=="invalid_channel")terrain->height[0]=1.5f;
         runner.ReplayTerrain(terrain);
+        // Offline only: emulate a clock recoil after successful receive without
+        // changing the real clock or publishing a synthetic terrain message.
+        if(terrain_case=="clock_after_receive")terrain->header.stamp=rclcpp::Time(stamp.nanoseconds()+200000000LL);
         runner.ReplayInferenceDelay(frame.value("inference_delay_s",0.f));
         types::RobotBasicState ro;ro.joint_pos=handoff.col(1);ro.joint_vel.setZero();ro.body_receive_age_s=.001;
         const float yaw=frame.at("yaw").get<float>();ro.base_rpy=types::Vec3f(0,0,yaw);
@@ -102,15 +108,23 @@ int main(int argc,char** argv){
         checks["nonfinite_body_rejected"]=rejects([&]{runner.ExecuteCTSSubstep(last_nominal,invalid);});
         auto published=last_nominal;published.goal_joint_pos[1]+=.0001f;
         runner.RecordCTSCommandPublished(published.ConvertToMat());
-        const auto previous=runner.ReplayNominalAction();
+        const auto previous=runner.ReplayPreviousAction();
         std::this_thread::sleep_for(std::chrono::milliseconds(35));
         types::UserCommand stopped;
         const auto held=runner.getRobotAction(last_state,stopped);
         published.goal_joint_vel.setZero();published.tau_ff.setZero();
-        checks["missed_policy_tick_latches_hold"]=runner.CTSNominalIsHeld();
-        checks["hold_preserves_published_target_and_pd"]=held.ConvertToMat().isApprox(published.ConvertToMat());
-        checks["hold_stops_wheels_and_feedforward"]=held.goal_joint_vel.isZero()&&held.tau_ff.isZero();
-        checks["hold_does_not_advance_previous_action"]=previous==runner.ReplayNominalAction();
+        if(runner.CTSHoldsEnabled()){
+          checks["missed_policy_tick_latches_hold"]=runner.CTSNominalIsHeld();
+          checks["hold_preserves_published_target_and_pd"]=held.ConvertToMat().isApprox(published.ConvertToMat());
+          checks["hold_stops_wheels_and_feedforward"]=held.goal_joint_vel.isZero()&&held.tau_ff.isZero();
+          checks["hold_does_not_advance_previous_action"]=previous==runner.ReplayPreviousAction();
+        }else{
+          checks["missed_policy_tick_continues_without_hold"]=!runner.CTSNominalIsHeld();
+          const auto support=runner.DiscardCTSCandidateAndSupport();
+          checks["recovery_preserves_published_target_and_pd"]=support.ConvertToMat().isApprox(published.ConvertToMat());
+          checks["recovery_stops_wheels_and_feedforward"]=support.goal_joint_vel.isZero()&&support.tau_ff.isZero();
+          checks["recovery_does_not_advance_previous_action"]=previous==runner.ReplayPreviousAction();
+        }
         checks["stale_body_rejected_after_hold"]=rejects([&]{runner.ExecuteCTSSubstep(last_nominal,stale);});
         for(const auto& result:checks)if(!result.get<bool>())throw std::runtime_error("nominal_pd replay regression failed: "+checks.dump());
       }
@@ -118,6 +132,7 @@ int main(int argc,char** argv){
     rclcpp::shutdown();initialized=false;
     std::cout<<nlohmann::json({{"hardware_commands",0},{"command_publishers",0},{"fixture_scope","synthetic isolated live-runner replay"},
         {"execution_mode",m20_cts::ExecutionMode(cfg)},{"checks",checks},
+        {"holds_enabled",robot.at("policy").value("hold_enabled",true)},
         {"scenario",request.value("scenario",std::string("nominal"))},{"frames",rows}}).dump()<<std::endl;
     return 0;
   }catch(const std::exception& e){if(initialized)rclcpp::shutdown();std::cerr<<e.what()<<std::endl;return 2;}

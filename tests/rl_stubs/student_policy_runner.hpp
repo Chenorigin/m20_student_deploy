@@ -25,6 +25,8 @@ public:
     bool UsesLandingControl()const{return landing;}
     void CheckCTSBody(const types::RobotBasicState& state)const{core.CheckBody(state,.04);}
     bool CTSNominalIsHeld()const{return core.Latched();}
+    bool CTSHoldsEnabled()const{return core.HoldsEnabled();}
+    types::RobotAction DiscardCTSCandidateAndSupport(){return core.DiscardCandidateAndSupport();}
     void LatchCTSTimingHold(const std::string& reason){(void)core.Hold(reason);}
     types::RobotAction getRobotAction(const types::RobotBasicState&,const types::UserCommand&)override{
         ++inferences;auto candidate=core.Map(action.data(),.02);if(on_infer)on_infer();return candidate;

@@ -36,6 +36,15 @@ def prepare(path, config, scenario="nominal"):
             frames[-1].update(terrain_session=2, query_age_s=.2)
         elif tick >= 8 and scenario == "inference_expiry":
             frames[-1].update(query_age_s=.11, inference_delay_s=.015)
+        elif scenario == "invalid_terrain_recovery":
+            if tick == 2:
+                frames[-1]['terrain_case'] = 'wrong_geometry'
+            elif tick == 4:
+                frames[-1]['query_age_s'] = -.2
+            elif tick == 6:
+                frames[-1]['terrain_case'] = 'invalid_channel'
+            elif tick == 8:
+                frames[-1]['terrain_case'] = 'clock_after_receive'
     document = dict(scope="synthetic offline fixture only", scenario=scenario, binding=binding, frames=frames)
     if cfg["aos"].get("cts_execution_mode", "landing") == "nominal_pd":
         del document["binding"]
@@ -66,6 +75,11 @@ def verify(report, model_dir):
                        "stale_body_rejected", "nonfinite_body_rejected", "missed_policy_tick_latches_hold",
                        "hold_preserves_published_target_and_pd", "hold_stops_wheels_and_feedforward",
                        "hold_does_not_advance_previous_action", "stale_body_rejected_after_hold"}
+    if rows.get('holds_enabled', True) is False:
+        expected_checks -= {"missed_policy_tick_latches_hold", "hold_preserves_published_target_and_pd",
+                            "hold_stops_wheels_and_feedforward", "hold_does_not_advance_previous_action"}
+        expected_checks |= {"missed_policy_tick_continues_without_hold", "recovery_preserves_published_target_and_pd",
+                            "recovery_stops_wheels_and_feedforward", "recovery_does_not_advance_previous_action"}
     if nominal_pd and (set(rows.get("checks", {})) != expected_checks or
                        any(value is not True for value in rows["checks"].values())):
         raise ValueError("Nominal PD boundary/HOLD checks missing or failed")
@@ -102,6 +116,11 @@ def verify(report, model_dir):
             raise ValueError("Live runner did not execute four real controller substeps per policy tick")
         if rows.get("scenario") in ("expired_source", "inference_expiry") and i >= 8:
             np.testing.assert_array_equal(obs[57:618], np.zeros(561))
+        if rows.get('scenario') == 'invalid_terrain_recovery':
+            if i in (2, 4, 6, 8):
+                np.testing.assert_array_equal(obs[57:618], np.zeros(561))
+            elif not np.any(obs[244:431] > .5):
+                raise ValueError('Valid terrain did not recover after rejected input')
         history = history[1:] + [obs[:57].copy()]
         raw_effective_differ |= bool(i < 4 and obs[8] != raw[2])
     if not raw_effective_differ:
@@ -128,7 +147,7 @@ def main():
     operation.add_argument("--verify", type=Path)
     ap.add_argument("--config", type=Path, default=Path("runtime/heightmap_v1.local.json"))
     ap.add_argument("--model-dir", type=Path, default=Path("models/v1"))
-    ap.add_argument("--scenario", choices=["nominal", "expired_source", "inference_expiry"], default="nominal")
+    ap.add_argument("--scenario", choices=["nominal", "expired_source", "inference_expiry", "invalid_terrain_recovery"], default="nominal")
     args = ap.parse_args()
     if args.prepare:
         prepare(args.prepare, args.config, args.scenario)

@@ -193,6 +193,7 @@ class M20PolicyRunner : public PolicyRunnerBase {
     source_session_=t->session_id;source_sequence_=t->sequence;have_watermark_=true;
     if(elapsed>align_age_){terrain_.reset();record("rejected","terrain source age exceeds alignment limit");return;}
     terrain_=std::move(t);received_=Clock::now();received_query_age_=elapsed;
+    if(control_&&!control_->HoldsEnabled())terrain_fault_.clear();
     trace_only([&]{received_stamp_=stamp;});
     record("accepted");
   }
@@ -335,6 +336,11 @@ public:
                <<" outputs_discarded=true"<<std::endl;
     }
     control_=std::make_unique<StudentControlCore>(robot_);
+    if(!control_->HoldsEnabled()&&(!cts_||!cts_nominal_pd_))
+      throw std::runtime_error("HOLD-disabled recovery requires CTS nominal_pd");
+    if(!control_->HoldsEnabled()){
+      coverage_hold_enabled_=false;terrain_timing_hold_enabled_=false;terrain_source_session_hold_enabled_=false;
+    }
     if(cts_)control_->RequirePublicationCommit();
     SetDecimation(4);reset();node_=std::make_shared<rclcpp::Node>("m20_student_terrain_reader");
     subscription_=node_->create_subscription<Terrain>(cfg_["topics"]["terrain"].get<std::string>(),rclcpp::QoS(1).best_effort(),[this](Terrain::SharedPtr t){receive(std::move(t));});
@@ -393,6 +399,8 @@ public:
     if(cts_execution_)cts_execution_->CheckFeedback(state.landing_feedback,m20_cts::SteadySeconds());
   }
   void LatchCTSTimingHold(const std::string& reason){(void)hold(RobotBasicState{},reason);}
+  bool CTSHoldsEnabled()const{return control_->HoldsEnabled();}
+  RobotAction DiscardCTSCandidateAndSupport(){return control_->DiscardCandidateAndSupport();}
   void FlushCTSTrace() noexcept {
     if(pending_cts_trace_){auto emit=std::move(pending_cts_trace_);pending_cts_trace_=nullptr;trace_only(emit);}
     if(pending_substep_trace_){
@@ -410,6 +418,7 @@ public:
   const std::vector<float>& ReplayObservation()const{return trace_observation_;}
   const std::array<float,3>& ReplayRawCommand()const{return trace_raw_command_;}
   const std::array<float,16>& ReplayNominalAction()const{return control_->CandidatePrevious();}
+  const std::array<float,16>& ReplayPreviousAction()const{return control_->Previous();}
   const std::array<uint64_t,6>& ReplayLandingCounts()const{static const std::array<uint64_t,6> none{};
     return cts_execution_?cts_execution_->Controller().Counts():none;}
   void ReplayInferenceDelay(float seconds){if(!std::isfinite(seconds)||seconds<0||seconds>.03f)throw std::runtime_error("replay delay out of bounds");replay_after_inference_delay_s_=seconds;}
@@ -516,13 +525,16 @@ public:
     control_->CheckBody(ro,cfg_["aos"]["max_proprio_age_s"].get<double>());
     tick_elapsed_s_=std::chrono::duration<double>(tick-last_tick_).count();
     if(control_->Latched())return hold(ro,control_->Reason());
-    if(have_tick_&&!tick_interval_ok(tick_elapsed_s_))return hold(ro,"policy tick discontinuity");
+    if(control_->HoldsEnabled()&&have_tick_&&!tick_interval_ok(tick_elapsed_s_))return hold(ro,"policy tick discontinuity");
     Terrain::SharedPtr terrain;double receive_age;std::string terrain_fault;uint64_t source_generation,source_session;
     {std::lock_guard<std::mutex> guard(mutex_);terrain=terrain_;terrain_fault=terrain_fault_;source_generation=source_generation_;source_session=source_session_;receive_age=terrain?std::chrono::duration<double>(Clock::now()-received_).count():-1;trace_received_query_age_=terrain?received_query_age_:-1;
       trace_only([&]{trace_terrain_received_stamp_=received_stamp_;});}
     trace_receive_age_=receive_age;
     if(terrain){trace_have_terrain_=true;trace_source_session_=terrain->session_id;trace_source_sequence_=terrain->sequence;trace_query_stamp_=terrain->header.stamp.sec+terrain->header.stamp.nanosec*1e-9;trace_terrain_frame_=terrain;}
-    if(!terrain_fault.empty())return hold(ro,terrain_fault);
+    if(!terrain_fault.empty()){
+      if(control_->HoldsEnabled())return hold(ro,terrain_fault);
+      terrain.reset();trace_mode("unknown_rejected_terrain");
+    }
     auto accept_source_switch=[&](){
       if(cts_execution_)cts_execution_->SelectMapSource(source_session,ro.landing_feedback,m20_cts::SteadySeconds());
       const uint64_t previous_session=policy_terrain_session_,previous_generation=policy_source_generation_;
@@ -552,8 +564,10 @@ public:
       if(terrain->schema_version!=2||!terrain->operator_commissioned||terrain->geometry_hash!=expected_geometry_||terrain->profile!=profile_||terrain->header.frame_id!=cfg_["frames"]["output"].get<std::string>()||!terrain->motion_compensated)return hold(ro,"terrain contract or pose source mismatch");
       const double stamp=terrain->header.stamp.sec+terrain->header.stamp.nanosec*1e-9;
       terrain_age_sample=Clock::now();age=node_->now().seconds()-stamp;trace_terrain_age_=age;
-      if(!std::isfinite(age)||age < -future_)return hold(ro,"terrain clock invalid or from future");
-      if(age>align_age_){
+      if(!std::isfinite(age)||age < -future_){
+        if(control_->HoldsEnabled())return hold(ro,"terrain clock invalid or from future");
+        trace_mode("unknown_clock_invalid");terrain.reset();
+      }else if(age>align_age_){
         if(terrain_timing_hold_enabled_)return hold(ro,"terrain clock alignment");
         trace_mode("unknown_frame_expired");terrain.reset();
       }else trace_mode("fresh");

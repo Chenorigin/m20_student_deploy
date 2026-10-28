@@ -81,6 +81,9 @@ SDK 工作者每个真实 5ms 周期执行一次控制，每四周期更新一�
 漏拍、重复时钟、过期推理、退出后迟到结果均不得发布，不能补跑虚拟子步。
 修正只作用于腿参考和增益；轮速与 previous nominal action 不受污染。
 HOLD 从 SDK 实际发布缓存保持最后支撑目标/增益，轮速与前馈归零。
+当前 CTS nominal_pd 配置可用 `policy.hold_enabled=false` 关闭锁存。调度异常丢弃未发布候选，
+使用实际发布缓存恢复下一新鲜周期；地形失效降级 unknown 并在好帧恢复。
+身体、有限值、关节边界、控制权与退出仍是硬故障；详细开关语义见 [参数台账](DEPLOYMENT_PARAMETERS.md)。
 
 缺省模式及显式 `landing` 模式仍要求完整触地验证：控制公式和调用链已实现，但硬件触地验证仍缺。
 `standalone_robot_controller=false` 与完整 `quiet_execution_control` 同时保存在 sidecar、TorchScript 和 ONNX。

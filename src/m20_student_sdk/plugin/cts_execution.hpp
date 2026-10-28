@@ -24,6 +24,13 @@ class SubstepClock {
   bool seen_=false;int64_t last_tick_=0;double last_time_=0;
 public:
   void Reset(){seen_=false;}
+  // Recovery records only the observed discarded tick; never simulates missing
+  // substeps or rebases a regressing physical clock/counter.
+  void DiscardTick(int64_t tick,double now){
+    if(!std::isfinite(now)||tick<0||(seen_&&(tick<last_tick_||now<last_time_)))
+      throw std::runtime_error("CTS invalid/regressing discarded tick");
+    seen_=true;last_tick_=tick;last_time_=now;
+  }
   bool Advance(int64_t tick,double now){
     if(!std::isfinite(now)||tick<0)throw std::runtime_error("CTS invalid servo clock");
     if(seen_&&now<=last_time_)throw std::runtime_error("CTS nonmonotonic servo clock");

@@ -13,6 +13,10 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 SDK = ROOT / 'src/m20_student_sdk'
 SCENARIOS = [
+    'nohold_discard_then_fresh_support', 'nohold_late_published_retained',
+    'nohold_missing_tick_recovers', 'nohold_first_tick_missed',
+    'nohold_body_expired', 'nohold_bad_action', 'nohold_target_outside_limits',
+    'nohold_r2_during_inference', 'nohold_clock_regression',
     'worker_scheduling_failure',
     'healthy_four_substeps', 'observed_worker_jitter', 'interval_above_8_5ms',
     'interval_below_1_5ms', 'duplicate_generation', 'deadline_5ms_boundary', 'deadline_over_5ms',
