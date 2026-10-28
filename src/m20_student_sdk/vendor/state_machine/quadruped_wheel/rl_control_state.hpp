@@ -16,6 +16,7 @@
 #include "user_command_interface.h"
 #include "json.hpp"
 #include "basic_function.hpp"
+#include "cts_worker_scheduling.hpp"
 #include <functional>
 
 namespace qw {
@@ -193,6 +194,14 @@ namespace qw {
         }
 
         void PolicyRunner() {
+            if(m20_policy_->IsCTS()){
+                try{m20_cts::ConfigureWorkerScheduling();}
+                catch(const std::exception& error){
+                    std::cerr<<"[STUDENT_FAULT] "<<error.what()<<"; CTS worker not started"<<std::endl;
+                    policy_fault_.store(true,std::memory_order_release);
+                    start_flag_.store(false,std::memory_order_release);return;
+                }
+            }
             int run_cnt_record=-1;
             m20_cts::SubstepClock cts_clock;
             RobotAction cts_nominal;
@@ -260,7 +269,7 @@ namespace qw {
                 exit(0);
             }
             policy_ptr_->DisplayPolicyInfo();
-            if(m20_policy_->IsCTS())std::cout<<"[CTS_SCHEDULING] phase_guard=v2 nominal_successor_overlap="
+            if(m20_policy_->IsCTS())std::cout<<"[CTS_SCHEDULING] phase_guard=v3 nominal_successor_overlap="
                 <<(m20_policy_->UsesLandingControl()?"disabled":"enabled")
                 <<" snapshot_deadline_ms=5 worker_deadline_ms=5"<<std::endl;
         }

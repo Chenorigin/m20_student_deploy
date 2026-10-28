@@ -36,6 +36,7 @@ done
 source scripts/board_env.sh
 family=$(python3 -c 'import json;print(json.load(open("models/v1/observation_contract.json")).get("deployment_family",""))')
 if [[ "$family" == m20_cts_student ]]; then
+  export M20_CTS_WORKER_CPU=4 M20_CTS_WORKER_FIFO_PRIORITY=20
   python3 scripts/validate_cts_bundle.py --metadata-only
   python3 scripts/offline_cts.py --model-dir models/v1 --probe install/m20_student_sdk/lib/m20_student_sdk/student_onnx_probe
 else

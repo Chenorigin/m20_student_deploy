@@ -145,3 +145,5 @@ sudo -E bash scripts/operator_start_aos.sh v1 supported-init
 ### CTS nominal_pd 相位重叠修复（2026-10-28）
 
 启动日志 `CTS_SCHEDULING phase_guard=v2` 表示修复版已加载：当前观测副本仍在原截止时间内时，允许观测生产线程前进到紧邻下一代。跳代、原快照超时、worker 超时、控制权及本体检查继续拒绝；landing 的严格代际规则保留。该修复不更换模型或地图配置，也不会自动解除已有 HOLD。若再次出现 `CTS_TIMING_HOLD`，终端会同时记录选定/当前代号、worker 与快照耗时及发布状态。实测与运行收据在 RL 项目 `logs/evaluation/cts_servo_fix_20261028/`；本地与板端离线通过不代表物理行走验收。
+
+后续现场 v2 仍因真实 worker 超时 HOLD。v3 保留上述相位修复及全部截止保护，由原启动入口显式配置仅 CTS worker 的固定 CPU 与 FIFO 调度，并在入口失败时请求安全退出；其他线程和厂商进程保持原设置。核对 `[CTS_WORKER] verified=true` 和线程实际调度，不能单凭构造阶段的 `phase_guard=v3` 声称实时设置已生效。

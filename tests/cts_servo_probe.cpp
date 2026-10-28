@@ -9,6 +9,7 @@
 
 namespace qw {
 struct RLControlStateTest {
+    static void Worker(RLControlState& state){state.PolicyRunner();}
     static std::shared_ptr<M20PolicyRunner> Policy(RLControlState& state){return state.m20_policy_;}
     static void Init(RLControlState& state,const MatXf& seed){
         state.start_flag_=true;state.policy_fault_=false;state.last_publication_sequence_=0;
@@ -75,7 +76,10 @@ struct Fixture {
 };
 static void run(const std::string& scenario){
     Fixture f;
-    if(scenario=="healthy_four_substeps"){
+    if(scenario=="worker_scheduling_failure"){
+        setenv("M20_CTS_WORKER_CPU","invalid",1);setenv("M20_CTS_WORKER_FIFO_PRIORITY","20",1);
+        Access::Worker(*f.state);require(f.state->LoseControlJudge(),"worker scheduling failure did not request safe exit");f.Unpublished();
+    }else if(scenario=="healthy_four_substeps"){
         for(int tick=0;tick<4;++tick){f.now=tick*.005;f.Step(tick);}
         require(f.robot->publications.size()==4&&f.policy->inferences==1&&!f.Held(),"four substep policy decimation failed");
         require(std::abs(f.policy->core.Previous()[1]-.2f)<1e-7,"published action did not commit");
@@ -270,6 +274,7 @@ int main(int argc,char** argv){
     try{
         if(argc!=3)throw std::runtime_error("usage: cts_servo_probe robot.json scenario");
         setenv("M20_ROBOT_CONFIG",argv[1],1);setenv("M20_POLICY_PATH",argv[1],1);unsetenv("M20_CONTROL_TRACE_PATH");
+        unsetenv("M20_CTS_WORKER_CPU");unsetenv("M20_CTS_WORKER_FIFO_PRIORITY");
         run(argv[2]);
         std::cout<<nlohmann::json{{"passed",true},{"scenario",argv[2]},
             {"scope","production RLControlState step/update with fake non-I/O dependencies"},

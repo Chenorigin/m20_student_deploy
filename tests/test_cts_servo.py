@@ -13,6 +13,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 SDK = ROOT / 'src/m20_student_sdk'
 SCENARIOS = [
+    'worker_scheduling_failure',
     'healthy_four_substeps', 'observed_worker_jitter', 'interval_above_8_5ms',
     'interval_below_1_5ms', 'duplicate_generation', 'deadline_5ms_boundary', 'deadline_over_5ms',
     'deadline_under_5ms', 'snapshot_expired_before_inference',
