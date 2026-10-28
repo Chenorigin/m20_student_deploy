@@ -1,5 +1,9 @@
 # M20 Student 模型部署工作区
 
+新增 CTS 架构支持，使用完整学生 encoder＋共享 decoder 和独立原始命令输入。
+导出、GOS 感知契约、CPU/C++ 离线验证与新候选准备见 [CTS 部署指南](docs/CTS_DEPLOYMENT.md)。
+CTS 的强制落脚控制尚无经过验证的硬件接线，因此真机启动保持拦截；下文是原 student-v3.5 release 的记录。
+
 仓库与本地目录统一命名为 `m20_student_deploy`，用于持续维护 Student 模型部署。当前随附的是 student-v3.5 的适配实现；下面的模型版本、`deployment_family`、校验脚本名及板端 release 路径仍表示具体模型的兼容性契约，不能仅通过重命名替换。部署其它版本时，应使用匹配的模型契约并完成对应验证。
 
 GitHub 仓库包含源码、配置、当前模型文件和 `evidence/offline_models/` 固定测试输入；构建产物、运行状态和其它历史实测数据仅保留在本地。下文其它 `evidence/` 链接需在本地查看。`SOURCE_SHA256.json` 是原始部署副本的历史快照；打包时由 `scripts/package_release.py` 重新生成 payload 校验清单。

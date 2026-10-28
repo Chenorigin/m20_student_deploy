@@ -115,13 +115,17 @@ public:
      * Joints with index % 4 == 3 have kp forced to 0 (velocity/torque mode)
      */
     virtual void SetJointCommand(Eigen::Matrix<float, Eigen::Dynamic, 5> input) {
+        (void)SetJointCommandWithReceipt(input);
+        FlushJointCommandTrace();
+    }
+    virtual interface::JointCommandReceipt SetJointCommandWithReceipt(MatXf input) override {
         // A foreign stream must not race this SDK's damping/position writes.
         // Latch until operator intervention; hardware exit/hold semantics still
         // require commissioning and are never inferred from endpoint silence.
         if(foreign_command_seen_.load()||command_authority_lost_.load()){
             if(!command_authority_lost_.exchange(true))RCLCPP_ERROR(node_->get_logger(),"Control ownership lost; SDK command output disabled");
             TraceCommandEvent(input,nullptr,"blocked",nlohmann::json(),nlohmann::json(),"control ownership lost");
-            return;
+            return {};
         }
         auto msg = drdds::msg::JointsDataCmd();
         for (int i = 0; i < dof_num_; ++i) {
@@ -145,16 +149,29 @@ public:
             TraceCommandEvent(input,&msg,"publish_failed",publish_start,publish_end,"DDS publisher threw; delivery is unknown");
             throw;
         }
+        const double returned_steady_s=m20_cts::SteadySeconds();
         try{publish_end=StudentTrace::Stamp();}catch(...){}
         MatXf trace_sdk_input;
         try{trace_sdk_input=input;}catch(...){}
         // Retain the model-frame command actually published for FSM handoff.
+        interface::JointCommandReceipt receipt;
         {
             std::lock_guard<std::mutex> lock(command_cache_mutex_);
             for(int j=3;j<dof_num_;j+=4)input(j,0)=0;
             joint_cmd_=input;
+            receipt={true,++command_sequence_,returned_steady_s,input};
         }
-        TraceCommandEvent(trace_sdk_input,&msg,"publish_returned",publish_start,publish_end,
+        // This interface has one FSM writer. Defer serialization until that
+        // worker has released its publication gate and decided the deadline.
+        pending_trace_input_=std::move(trace_sdk_input);pending_trace_wire_=std::move(msg);
+        pending_trace_start_=std::move(publish_start);pending_trace_end_=std::move(publish_end);
+        pending_trace_=true;
+        return receipt;
+    }
+    void FlushJointCommandTrace() noexcept override {
+        if(!pending_trace_)return;
+        pending_trace_=false;
+        TraceCommandEvent(pending_trace_input_,&pending_trace_wire_,"publish_returned",pending_trace_start_,pending_trace_end_,
                           "DDS publish returned; motor execution is not acknowledged");
     }
 
@@ -164,6 +181,11 @@ public:
     }
 private:
     std::mutex command_cache_mutex_;
+    uint64_t command_sequence_=0;
+    bool pending_trace_=false;
+    MatXf pending_trace_input_;
+    drdds::msg::JointsDataCmd pending_trace_wire_;
+    nlohmann::json pending_trace_start_,pending_trace_end_;
     void TraceCommandEvent(const MatXf& input,const drdds::msg::JointsDataCmd* wire,
                            const char* status,const nlohmann::json& publish_start,
                            const nlohmann::json& publish_end,const char* reason) noexcept {

@@ -31,6 +31,11 @@ def main():
     if args.output.exists() or record_path.exists():
         raise ValueError("Use a new ONNX output path; do not overwrite an existing release")
     actual = json.loads(args.contract.read_text())
+    if actual.get("deployment_family") == "m20_cts_student":
+        if args.profile != "v1":raise ValueError("CTS requires profile v1")
+        from export_cts_onnx import export_onnx
+        print(json.dumps(export_onnx(args.model,args.contract,args.output),indent=2))
+        return
     if "quiet_execution_control" in actual:
         raise ValueError("StairQuiet execution control is not implemented by the existing SDK")
     spec = contract(args.profile, actual.get("history_steps", 1))

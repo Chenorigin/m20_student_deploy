@@ -150,6 +150,9 @@ public:
                 ++run_cnt_;
             }
         }
+        // A ROS shutdown bypasses normal state transitions. Revoke/join the
+        // current state's worker before Run() returns and Stop() sends damping.
+        if(current_controller_)current_controller_->OnExit();
     }
 
     virtual void Stop() = 0;

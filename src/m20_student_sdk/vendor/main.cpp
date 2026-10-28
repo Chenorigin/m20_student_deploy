@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 #include <string>
+#include "student_model_io.hpp"
 
 #ifdef USE_SIMULATION
     #define BACKWARD_HAS_DW 1
@@ -35,6 +36,8 @@ int main(){
         std::cerr<<"AOS requires root passive input and operator-confirmed SDK mode before ROS/hardware initialization."<<std::endl;
         return 2;
     }
+    try { RequireStudentHardwareRuntime(); }
+    catch(const std::exception& error){std::cerr<<error.what()<<std::endl;return 2;}
     std::cout << "State Machine Start Running" << std::endl;
 
     // Keep the caller-selected DDS profile.  On the NX real-robot path this is

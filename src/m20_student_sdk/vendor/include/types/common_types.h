@@ -2,6 +2,7 @@
 #pragma once
 
 #include <Eigen/Dense>
+#include "cts_feedback.hpp"
 #include <atomic>
 #include <chrono>
 #include <iostream>
@@ -48,6 +49,7 @@ using MatXd = Eigen::MatrixXd;
 const float gravity = 9.815;
 
 struct RobotBasicState {
+    m20_cts::LandingFeedback landing_feedback;
     double body_receive_age_s = std::numeric_limits<double>::infinity();
     double snapshot_steady_s = std::numeric_limits<double>::quiet_NaN();
     Vec3f base_rpy;
@@ -98,7 +100,7 @@ struct RobotAction {
     VecXf kd;
     VecXf tau_ff;
 
-    MatXf ConvertToMat() {
+    MatXf ConvertToMat() const {
         MatXf res(goal_joint_pos.rows(), 5);
         res.col(0) = kp;
         res.col(1) = goal_joint_pos;

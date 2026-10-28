@@ -48,6 +48,7 @@ private:
     static constexpr float kMaxSide = 0.5f;
     static constexpr float kMaxYaw = 0.6f;
     std::array<std::array<float,2>,3> command_ranges_{{{-kMaxForward,kMaxForward},{-kMaxSide,kMaxSide},{-kMaxYaw,kMaxYaw}}};
+    bool forward_only_ = false;
 
     static void ClipNumber(float& num, float low, float high) {
         if (num < low) num = low;
@@ -56,6 +57,13 @@ private:
 
 public:
     GamepadInterface(RobotName robot_name) : UserCommandInterface(robot_name) {
+        if (const char* value = std::getenv("M20_FORWARD_ONLY")) {
+            const std::string option(value);
+            if (option != "0" && option != "1")
+                throw std::runtime_error("M20_FORWARD_ONLY must be 0 or 1");
+            forward_only_ = option == "1";
+        }
+        if (forward_only_) std::cout << "[COMMAND_SCOPE] forward_only=true; negative forward velocity becomes zero" << std::endl;
         if(const char* path=std::getenv("M20_ROBOT_CONFIG")){
             std::ifstream stream(path);if(!stream)throw std::runtime_error("cannot read gamepad robot config");
             json config;stream>>config;
@@ -402,6 +410,7 @@ private:
             ClipNumber(forward, command_ranges_[0][0], command_ranges_[0][1]);
             ClipNumber(side, command_ranges_[1][0], command_ranges_[1][1]);
             ClipNumber(yaw, command_ranges_[2][0], command_ranges_[2][1]);
+            if (forward_only_) forward = std::max(0.0f, forward);
 
             if (!CommandFresh(cmd_info)) {
                 res = buildResponse(cmd_info, 4, "Expired steering command");

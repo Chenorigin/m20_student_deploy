@@ -3,12 +3,18 @@
 import json
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import numpy as np
 
 ROOT=Path(__file__).resolve().parents[1]
 
 def main():
+    actual=json.loads((ROOT/'models/v1/observation_contract.json').read_text())
+    if actual.get('deployment_family')=='m20_cts_student':
+        subprocess.run([sys.executable,str(ROOT/'scripts/offline_cts.py'),
+                        '--probe',str(ROOT/'install/m20_student_sdk/lib/m20_student_sdk/student_onnx_probe')],check=True)
+        return
     probe=ROOT/'install/m20_student_sdk/lib/m20_student_sdk/student_onnx_probe'
     if not probe.is_file():raise RuntimeError('Build m20_student_sdk on AOS first')
     from validate_v35_bundle import validate

@@ -21,6 +21,7 @@
 #include "drdds/msg/battery_data.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 #include "std_msgs/msg/float32_multi_array.hpp"
+#include "std_msgs/msg/string.hpp"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -29,6 +30,7 @@
 #include <thread>
 #include <unistd.h>
 #include "command_ownership.hpp"
+#include "cts_execution_mode.hpp"
 
 using namespace dds;
 
@@ -62,6 +64,10 @@ protected:
     mutable std::mutex joint_state_mutex_;
     mutable std::mutex imu_state_mutex_;
     mutable std::mutex health_state_mutex_;
+    mutable std::mutex landing_state_mutex_;
+    std::unique_ptr<m20_cts::LandingFeedbackReceiver> landing_receiver_;
+    nlohmann::json landing_binding_;
+    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr landing_sub_;
 
     double time_stamp_;
     float remain_bat;
@@ -277,6 +283,29 @@ public:
         joint_data_sub_ = node_->create_subscription<drdds::msg::JointsData>("/JOINTS_DATA", joint_state_qos,
                                     std::bind(&DdsInterface::Handler, this,std::placeholders::_1),
                                     joint_options);
+        // Optional measured-input consumer, with no publisher or SDK command.
+        // A producer/binding must be commissioned independently before CTS is
+        // admitted. Configuring this reader does not open the main capability gate.
+        const char* execution_config=std::getenv("M20_HEIGHTMAP_CONFIG");
+        nlohmann::json execution_cfg={{"aos",nlohmann::json::object()}};
+        if(execution_config){std::ifstream input(execution_config);input>>execution_cfg;}
+        if(m20_cts::ExecutionMode(execution_cfg)!="nominal_pd")if(const char* path=std::getenv("M20_CTS_FEEDBACK_CONTRACT")){
+            std::ifstream input(path);input>>landing_binding_;
+            landing_receiver_=std::make_unique<m20_cts::LandingFeedbackReceiver>(landing_binding_);
+            const auto topic=landing_binding_.at("topic").get<std::string>();
+            if(topic.empty()||topic=="/JOINTS_CMD")throw std::runtime_error("invalid CTS feedback topic");
+            landing_sub_=node_->create_subscription<std_msgs::msg::String>(topic,joint_state_qos,
+                [this](const std_msgs::msg::String::SharedPtr msg){
+                    std::lock_guard<std::mutex> lock(landing_state_mutex_);
+                    try{
+                        if(msg->data.size()>16384)throw std::runtime_error("oversized CTS feedback");
+                        auto publishers=node_->get_publishers_info_by_topic(landing_binding_.at("topic").get<std::string>());
+                        if(publishers.size()!=1||publishers.front().node_name()!=landing_binding_.at("publisher_node").get<std::string>())
+                            throw std::runtime_error("CTS measured feedback publisher changed/ambiguous");
+                        landing_receiver_->Consume(nlohmann::json::parse(msg->data),m20_cts::SteadySeconds());
+                    }catch(const std::exception& e){landing_receiver_->Reject(e.what());}
+                });
+        }
         const char* imu_source_env = std::getenv("M20_IMU_SOURCE");
         const std::string imu_source = imu_source_env == nullptr ? "bridge" : imu_source_env;
         if (imu_source == "bridge" || imu_source == "simulation" ||
@@ -561,6 +590,18 @@ public:
         if(command_authority_lost_.load()||foreign_command_seen_.load())return std::numeric_limits<double>::infinity();
         const double oldest=std::min(joint_receive_time_.load(std::memory_order_acquire),imu_receive_time_.load(std::memory_order_acquire));
         return oldest>0?ReceiveSteadyNow()-oldest:std::numeric_limits<double>::infinity();
+    }
+    RobotBasicState GetCoherentRobotState() override {
+        std::scoped_lock lock(joint_state_mutex_,imu_state_mutex_);
+        RobotBasicState out;
+        out.snapshot_steady_s=ReceiveSteadyNow();out.body_receive_age_s=GetBodyReceiveAgeSeconds();
+        out.joint_pos=joint_pos_;out.joint_vel=joint_vel_;out.joint_tau=joint_tau_;
+        out.base_rpy=rpy_;out.base_omega=omega_body_;out.base_acc=acc_;
+        return out;
+    }
+    m20_cts::LandingFeedback GetLandingFeedback() override {
+        std::lock_guard<std::mutex> lock(landing_state_mutex_);
+        return landing_receiver_?landing_receiver_->Current():m20_cts::LandingFeedback{};
     }
 
     virtual void Handler(const drdds::msg::JointsData::SharedPtr msg) {

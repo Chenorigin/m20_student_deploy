@@ -90,9 +90,16 @@ def main():
     ap.add_argument("--profile", choices=("v0", "v1"), required=True)
     ap.add_argument("--output", type=Path, required=True)
     ap.add_argument("--env-yaml", type=Path, help="defaults to env.yaml beside the checkpoint")
+    ap.add_argument("--training", type=Path, help="CTS only: training checkout for its canonical loader")
     args = ap.parse_args()
     torch.set_num_threads(1)
     saved = torch.load(args.checkpoint, map_location="cpu", weights_only=True)
+    if "cts" in saved:
+        if args.profile != "v1" or args.training is None:
+            raise ValueError("CTS requires --profile v1 --training /path/to/rl_training")
+        from export_cts_checkpoint import export
+        print(json.dumps(export(args.checkpoint,args.training,args.output),indent=2))
+        return
     actor, actual, provenance, spec = student_actor(saved, args.profile)
     from training_parameters import derive
     env_path = args.env_yaml or args.checkpoint.parent/"env.yaml"

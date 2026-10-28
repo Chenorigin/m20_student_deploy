@@ -64,6 +64,12 @@ int main(int argc,char** argv){
  bad=seed;bad(1,2)=-1;results["handoff_negative_kd_rejected"]=rejects([&]{c.Begin(bad);});
  bool dt_ok=true;for(double dt:{0.,-1.,INFINITY*1.,NAN*1.}){c.Begin(seed);auto stopped=c.Map(a,dt);dt_ok &= c.Latched()&&stopped.goal_joint_pos.isApprox(seed.col(1))&&stopped.goal_joint_vel.isZero();}
  results["invalid_intervals_latch_without_target_motion"]=dt_ok;
+ c.Begin(seed);auto safe=c.Map(std::array<float,16>{}.data(),.02);c.ValidateTarget(safe);
+ auto unsafe=safe;unsafe.goal_joint_pos[1]=100;
+ results["nominal_position_bound_rejected_with_clipping_disabled"]=rejects([&]{c.ValidateTarget(unsafe);});
+ unsafe=safe;unsafe.goal_joint_vel[3]=NAN;
+ results["nominal_nonfinite_command_rejected"]=rejects([&]{c.ValidateTarget(unsafe);});
+ results["nominal_target_validation_does_not_change_pd_or_targets"]=safe.ConvertToMat().isApprox(c.Map(std::array<float,16>{}.data(),.02).ConvertToMat());
  int ok=0,badn=0;for(auto& val:results.items())(val.value().get<bool>()?ok:badn)++;
  std::cout<<nlohmann::json{{"ok",ok},{"bad",badn},{"results",results}}.dump(2)<<std::endl;return badn?1:0;
 }

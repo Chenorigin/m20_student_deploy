@@ -106,8 +106,10 @@ def load_config(path):
     aos = cfg["aos"]
     aos.setdefault("coverage_hold_enabled", True)
     aos.setdefault("terrain_timing_hold_enabled", True)
-    if set(aos) != {"model_contract", "model_path", "max_alignment_age_s", "max_proprio_age_s", "min_valid_fraction", "coverage_hold_enabled", "terrain_timing_hold_enabled"}:
+    if set(aos) - {"cts_execution_mode"} != {"model_contract", "model_path", "max_alignment_age_s", "max_proprio_age_s", "min_valid_fraction", "coverage_hold_enabled", "terrain_timing_hold_enabled"}:
         raise ValueError("AOS config missing/unknown keys")
+    from .cts import execution_mode
+    execution_mode(cfg)
     for name in ("coverage_hold_enabled", "terrain_timing_hold_enabled"):
         if type(aos[name]) is not bool:
             raise ValueError(name + " must be bool")
@@ -125,6 +127,8 @@ def load_config(path):
         if aos[name]:
             model = Path(aos[name]).expanduser()
             aos[name] = str((model if model.is_absolute() else path.parent/model).resolve())
+    from .cts import configured_contract
+    configured_contract(cfg)
     return cfg
 
 
@@ -140,6 +144,10 @@ class Pipeline:
             if "visibility" not in cfg:
                 raise ValueError("Front map output requires calibrated sensor visibility")
             self.output_mask = front_map_mask(GRID, cfg["visibility"])
+        from .cts import configured_contract, front_mask
+        model = configured_contract(cfg)
+        if model is not None:
+            self.output_mask &= front_mask(model)
 
     def reset(self):
         self.mapper.reset()

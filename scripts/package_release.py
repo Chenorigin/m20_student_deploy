@@ -15,7 +15,7 @@ def main():
     args=parser.parse_args()
     if args.output.exists():raise ValueError('new archive path required')
     files=[]
-    for name in ('src','scripts','deploy','tests','runtime','models/v1','evidence/offline_models'):
+    for name in ('src','scripts','deploy','tests','docs','runtime','models/v1','evidence/offline_models'):
         files.extend(p for p in (ROOT/name).rglob('*') if p.is_file()
                      and '__pycache__' not in str(p) and p.suffix!='.pyc')
     for name in ('STAGED_NOT_ACCEPTED.txt','README.md'):

@@ -4,6 +4,13 @@ cd "$(dirname "$0")/.."
 profile=${1:-v1}
 [[ "$profile" == v1 ]] || { echo "This student-v3.5 release requires profile v1 (789D)." >&2; exit 2; }
 startup=${2:-strict}
+python3 scripts/check_execution_runtime.py --contract "models/$profile/observation_contract.json" \
+  --config "runtime/heightmap_$profile.local.json"
+execution_mode=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["aos"].get("cts_execution_mode","landing"))' "runtime/heightmap_$profile.local.json")
+if [[ "$execution_mode" == nominal_pd ]]; then
+  unset M20_CTS_FEEDBACK_CONTRACT
+  echo "CTS execution: nominal_pd; landing correction disabled; original joint targets and PD."
+fi
 preflight_args=()
 case "$startup" in
   strict) ;;
@@ -27,7 +34,13 @@ while [[ "$ancestor" =~ ^[0-9]+$ ]] && (( ancestor > 1 )); do
 done
 [[ "$durable" == true ]] || { echo "Use a board-local tmux session; SSH must not own the controller lifetime." >&2;exit 2; }
 source scripts/board_env.sh
-python3 scripts/validate_v35_bundle.py --model-metadata
+family=$(python3 -c 'import json;print(json.load(open("models/v1/observation_contract.json")).get("deployment_family",""))')
+if [[ "$family" == m20_cts_student ]]; then
+  python3 scripts/validate_cts_bundle.py --metadata-only
+  python3 scripts/offline_cts.py --model-dir models/v1 --probe install/m20_student_sdk/lib/m20_student_sdk/student_onnx_probe
+else
+  python3 scripts/validate_v35_bundle.py --model-metadata
+fi
 export M20_VERIFIED_MODEL_CONTRACT_SHA256=$(sha256sum models/v1/observation_contract.json | cut -d " " -f 1)
 export M20_GAMEPAD_TRANSPORT=passive M20_GAMEPAD_INTERFACE=${M20_GAMEPAD_INTERFACE:-eth0}
 install/m20_student_sdk/lib/m20_student_sdk/gamepad_observe "$M20_GAMEPAD_INTERFACE"
@@ -38,7 +51,9 @@ echo "This starts the SDK, including offset initialization commands. Confirm sta
 read -r -p "Type START_STUDENT to start; you will operate L1/L2/R2: " reply
 [[ "$reply" == START_STUDENT ]] || exit 2
 export M20_OPERATOR_START=START_STUDENT M20_IMU_SOURCE=direct M20_REMOTE_CONTROL=gamepad
-export M20_CONTROL_TRACE_PATH="$PWD/runtime/control_trace_$(date +%s%N).jsonl"
+trace_dir=${M20_CONTROL_TRACE_DIR:-"$PWD/runtime"}
+[[ -d "$trace_dir" && -w "$trace_dir" ]] || { echo "Trace directory is not writable: $trace_dir" >&2; exit 2; }
+export M20_CONTROL_TRACE_PATH="$trace_dir/control_trace_$(date +%s%N).jsonl"
 export M20_TRACE_FULL_OBSERVATION=1
 export M20_SDK_MODE_CONFIRMED=I_CONFIRMED
 export M20_POLICY_PATH="$PWD/models/$profile/policy.onnx"

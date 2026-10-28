@@ -17,6 +17,12 @@ using namespace types;
 
 namespace interface{
 const int BATTERY_DATA_SIZE=8;
+struct JointCommandReceipt {
+    bool published=false;
+    uint64_t sequence=0;
+    double returned_steady_s=0;
+    MatXf command;
+};
 
 class RobotInterface{
 private:
@@ -59,6 +65,10 @@ public:
      * @return double        time stamp
      */
     virtual double GetBodyReceiveAgeSeconds(){return std::numeric_limits<double>::infinity();}
+    virtual RobotBasicState GetCoherentRobotState(){throw std::runtime_error("coherent SDK state snapshot unavailable");}
+    // Default is explicitly unavailable. The legacy force getter's zero
+    // placeholder is never promoted to measured contact feedback.
+    virtual m20_cts::LandingFeedback GetLandingFeedback(){return {};}
     virtual double GetInterfaceTimeStamp() = 0;
 
     /**
@@ -103,6 +113,12 @@ public:
      * @param  input       a dof_num*5 matrix and each column represent kp, goal_angle_pos, kd, goal_vel, torque_feedforward
      */
     virtual void SetJointCommand(Eigen::Matrix<float, Eigen::Dynamic, 5> input) = 0;
+    // CTS requires an explicit receipt; the legacy void setter cannot prove
+    // whether ownership checks refused a command. Unknown delivery is a fault.
+    virtual JointCommandReceipt SetJointCommandWithReceipt(MatXf){
+        throw std::runtime_error("SDK publication receipts unavailable");
+    }
+    virtual void FlushJointCommandTrace() noexcept {}
 
     virtual MatXf GetJointCommand(){
         return joint_cmd_;

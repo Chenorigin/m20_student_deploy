@@ -20,6 +20,8 @@ torch = pytest.importorskip("torch", reason="training torch required for feedbac
 ROOT = Path(__file__).resolve().parents[1]
 TRAINING = ROOT.parent / "rl_training"
 REFERENCE = TRAINING / "source/rl_training/m20_student_v1/v3_5_feedback.py"
+if not REFERENCE.is_file():
+    REFERENCE = TRAINING / "source/rl_training/task_support/student_v3_5/v3_5_feedback.py"
 CHECKPOINT = Path(os.environ.get("M20_V35_CHECKPOINT", str(
     TRAINING / "logs/rsl_rl/deeprobotics_m20_student_v3_5/"
     "2026-10-19_12-12-39_599339_student_v3_5/model_2000.pt")))

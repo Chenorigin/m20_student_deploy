@@ -14,7 +14,10 @@ class StudentControlCore {
   bool wheel_target_velocity_clip_enabled_=true;
   std::string reason_;
   std::array<float,16> previous_{};
+  std::array<float,16> candidate_previous_{};
+  bool publication_commit_=false,candidate_pending_=false;
 public:
+  void RequirePublicationCommit(){publication_commit_=true;}
   explicit StudentControlCore(const nlohmann::json& robot):robot_(robot),
       leg_target_slew_enabled_(robot.at("policy").value("leg_target_slew_enabled",true)),
       joint_target_position_clip_enabled_(robot.at("policy").value("joint_target_position_clip_enabled",true)),
@@ -33,7 +36,8 @@ public:
     ValidateHandoff(command,robot_);
     last_.kp=command.col(0);last_.goal_joint_pos=command.col(1);
     last_.kd=command.col(2);last_.goal_joint_vel=types::VecXf::Zero(16);last_.tau_ff=types::VecXf::Zero(16);
-    previous_.fill(0);seeded_=true;latched_=false;reason_.clear();
+    previous_.fill(0);candidate_previous_.fill(0);candidate_pending_=false;
+    seeded_=true;latched_=false;reason_.clear();
   }
   void CheckBody(const types::RobotBasicState& ro,double max_age)const {
     if(ro.joint_pos.size()!=16||ro.joint_vel.size()!=16||!ro.joint_pos.allFinite()||!ro.joint_vel.allFinite()||!ro.base_omega.allFinite()||!ro.base_rot_mat.allFinite()||!std::isfinite(ro.body_receive_age_s)||ro.body_receive_age_s>max_age||ro.body_receive_age_s<0)throw std::runtime_error("invalid or stale SDK body state");
@@ -51,9 +55,20 @@ public:
   types::RobotAction Hold(const std::string& reason) {
     if(!seeded_)throw std::runtime_error("no verified standing handoff for HOLD");
     if(!latched_){latched_=true;reason_=reason;}
+    candidate_pending_=false;
     // Preserve the issued support target and gains, never rebase onto feedback.
     last_.goal_joint_vel.setZero();last_.tau_ff.setZero();
     return last_;
+  }
+  void ValidateTarget(const types::RobotAction& target)const {
+    const auto matrix=target.ConvertToMat();
+    if(matrix.rows()!=16||matrix.cols()!=5||!matrix.allFinite())
+      throw std::runtime_error("CTS corrupt nominal SDK target");
+    for(int j=0;j<16;++j)if(j%4!=3){
+      const auto& bounds=robot_.at("hardware").at("software_position_limits_sdk_rad").at(j);
+      if(target.goal_joint_pos[j]<bounds[0].get<float>()||target.goal_joint_pos[j]>bounds[1].get<float>())
+        throw std::runtime_error("CTS nominal target outside software position limits");
+    }
   }
   types::RobotAction Map(const float* action,double elapsed_s) {
     if(!seeded_)throw std::runtime_error("policy has no standing handoff");
@@ -88,8 +103,24 @@ public:
       // Match training last_action: policy request, before physical shaping.
       next_previous[i]=raw;
     }
-    last_=target;previous_=next_previous;return target;
+    candidate_previous_=next_previous;
+    if(publication_commit_)candidate_pending_=true;
+    else {last_=target;previous_=next_previous;}
+    return target;
   }
+  // Called only with a new successful SDK publication receipt. In CTS mode
+  // Map stages a request; neither support nor training last_action advances
+  // when the candidate is discarded, blocked, or delivery is unknown.
+  void RecordPublished(const types::MatXf& command){
+    if(!publication_commit_)return;
+    if(command.rows()!=16||command.cols()!=5||!command.allFinite())
+      throw std::runtime_error("invalid published command receipt");
+    last_.kp=command.col(0);last_.goal_joint_pos=command.col(1);last_.kd=command.col(2);
+    last_.goal_joint_vel=command.col(3);last_.tau_ff=command.col(4);
+    if(candidate_pending_&&!latched_)previous_=candidate_previous_;
+    candidate_pending_=false;
+  }
+  const std::array<float,16>& CandidatePrevious()const{return candidate_pending_?candidate_previous_:previous_;}
   bool Latched()const{return latched_;}
   bool LegTargetSlewEnabled()const{return leg_target_slew_enabled_;}
   bool JointTargetPositionClipEnabled()const{return joint_target_position_clip_enabled_;}

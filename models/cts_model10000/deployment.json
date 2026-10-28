@@ -1,0 +1,26 @@
+{
+  "deployment_family": "m20_cts_student",
+  "checkpoint_path": "/home/ubuntu/cyq_shixi_projects/rl_training/logs/rsl_rl/deeprobotics_m20_cts/2026-10-26_18-06-53_922646_cts/model_10000.pt",
+  "checkpoint_sha256": "4a827b8f5573f94d93d92d2e05947ad42602cad02a728b095250848e4bf9c683",
+  "policy_sha256": "0cbf0b9404158843d248112169601660abf0e2261eefa245c132912ece9ded3e",
+  "contract_sha256": "a289f0fbd69a987b59e182c5f159e36ac94784c1c1b3a4a3ec366f2be2d0bf3e",
+  "model_inputs": {
+    "obs": [
+      1,
+      789
+    ],
+    "raw_command": [
+      1,
+      3
+    ]
+  },
+  "source_state_key": "algorithm.models_state_dict.student + decoder",
+  "quiet_execution_control_sha256": "36637358ce2b1ce12592a4a0b9cb45c5655463e709766d0d5fe1035235fdca80",
+  "standalone_robot_controller": false,
+  "hardware_commands": 0,
+  "export_check": {
+    "samples": 128,
+    "max_abs_error": 0.0,
+    "device": "cpu"
+  }
+}

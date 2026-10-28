@@ -43,6 +43,9 @@ def validate_model_contract(path, expected):
     for key, value in checks.items():
         if actual.get(key) != value:
             raise ValueError("Model observation contract mismatch: " + key)
+    if actual.get("deployment_family") == "m20_cts_student" or "cts_version" in actual:
+        from .cts import validate_cts_contract
+        validate_cts_contract(actual)
     return actual
 
 

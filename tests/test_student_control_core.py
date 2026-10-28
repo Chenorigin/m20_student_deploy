@@ -38,4 +38,4 @@ def test_production_control_core(tmp_path):
                             timeout=10, preexec_fn=limits)
     checks = json.loads(result.stdout)
     assert checks['bad'] == 0
-    assert checks['ok'] == 26
+    assert checks['ok'] == 29

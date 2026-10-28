@@ -6,7 +6,12 @@ profile=${1:-v1}
 [[ "$(cat /opt/robot/os_type)" == CA9B_GOS ]] || exit 2
 [[ "$EUID" == 0 ]] || { echo "Use sudo -E; native input verifies the root factory process." >&2; exit 2; }
 source scripts/board_env.sh
-python3 scripts/validate_v35_bundle.py
+family=$(python3 -c 'import json;print(json.load(open("models/v1/observation_contract.json")).get("deployment_family",""))')
+if [[ "$family" == m20_cts_student ]]; then
+  python3 scripts/validate_cts_bundle.py --metadata-only
+else
+  python3 scripts/validate_v35_bundle.py
+fi
 python3 - "$profile" <<'PY'
 import sys
 from m20_heightmap.runtime import load_config
