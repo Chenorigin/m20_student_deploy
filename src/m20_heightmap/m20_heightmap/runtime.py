@@ -258,7 +258,8 @@ class Pipeline:
             displacement = r['max_pose_speed_m_s']*r['scan_duration_s']
         else:
             displacement = float(np.linalg.norm(scan_pose.position-fit_pose.position))
-        radius = math.sqrt(.85**2+.55**2+max(abs(self.mapper.cfg.min_relative_z_m),abs(self.mapper.cfg.max_relative_z_m))**2)
+        bx, by = self.mapper.capture_half_bounds
+        radius = math.sqrt(bx**2+by**2+max(abs(self.mapper.cfg.min_relative_z_m),abs(self.mapper.cfg.max_relative_z_m))**2)
         # Rotation cannot change ||body||. Reverse triangle inequality proves
         # every point outside this sphere is outside the final ROI at anchor.
         keep &= np.linalg.norm(body,axis=1) <= radius+displacement+1e-9
@@ -269,8 +270,8 @@ class Pipeline:
             basis = yaw_rotation(fit_pose.yaw)
             approximate = body @ (scan_pose.R.T @ basis) + (scan_pose.position-fit_pose.position) @ basis
             error = translation_from_scan + 2*np.linalg.norm(body,axis=1)*math.sin(rotation_path*.5) + 1e-7
-            keep &= ((np.abs(approximate[:,0]) <= .85+error) &
-                     (np.abs(approximate[:,1]) <= .55+error) &
+            keep &= ((np.abs(approximate[:,0]) <= bx+error) &
+                     (np.abs(approximate[:,1]) <= by+error) &
                      (approximate[:,2] >= self.mapper.cfg.min_relative_z_m-error) &
                      (approximate[:,2] <= self.mapper.cfg.max_relative_z_m+error))
         points, ranges = points[keep], ranges[keep]
@@ -325,7 +326,7 @@ class Pipeline:
         timings["fit"] = (time.monotonic()-fit_started)*1000
         if 'visibility' in self.cfg:
             patch=self.mapper.patches[-1]
-            xy=GRID @ yaw_rotation(pose.yaw)[:2,:2].T
+            xy=self.mapper.capture_grid @ yaw_rotation(pose.yaw)[:2,:2].T
             body_centres=np.column_stack((xy,patch.z-pose.position[2])) @ pose.R
             visible=visible_body(body_centres,self.cfg['visibility'])
             patch.valid &= visible

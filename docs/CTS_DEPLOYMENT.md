@@ -188,3 +188,21 @@ env -u FASTRTPS_DEFAULT_PROFILES_FILE -u FASTDDS_DEFAULT_PROFILES_FILE \
 
 
 本次禁止后退测试可在原 AOS 启动入口的环境中设置 `M20_FORWARD_ONLY=1`。它只在 gamepad 输入入口把负向 X 速度归零，前进、侧移、转向仍使用原命令范围；`0` 或不设置保留原行为，其他值拒绝启动。启动日志必须出现 `[COMMAND_SCOPE] forward_only=true`，并核对实际控制进程环境。该开关限制指令方向，不保证机身实际不向后移动，也不构成其他运动工况通过。
+
+## 扩展采集缓存（2026-10-28）
+
+GOS 可通过现场 runtime 的 `estimator.map_capture_padding_m` 扩大真实点云拟合和历史缓存支持域；模型输出网格与消息 ABI 不变。默认部署模板与训练 CTS 采集扩边台账对齐；缺省字段仍为零，保持历史行为。预筛球/框、拟合中心、Patch 源尺寸和可见性共同使用采集网格，查询仍为原策略网格。未知、遮挡墓碑、采集时间、过期和置信度语义保留，实机不注入仿真噪声或延迟。
+
+只把源码送到 `src` 不会更新已经安装的 Python 包。两板需同时更新源码及实际 import 的 `install/.../m20_heightmap`，GOS 重启已有纯感知 supervisor 后读取真实 status 中的 `map.capture_grid_shape/capture_points/output_points`；AOS 不因此启动 SDK。模型文件、动作保护和现场标定不得随地图修复覆盖。
+
+现场 runtime 的配置哈希变化会让原 commissioning 凭据失效；不得改写旧凭据冒充重新确认。重进 SDK 前在两板按原 `operator_commission.py --profile v1` 流程完成确认。旧配置、源码、安装副本和日志保留在板端 `runtime/capture_backup_20261028`。本轮正式资源、离线和实时回执见训练工作区 `logs/evaluation/cts_hardware_capture_20261028/`。
+
+无 ROS、无模型推理、无电机接口的板端检查：
+
+```bash
+source scripts/board_env.sh
+OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 python3 scripts/check_map_capture.py \
+  --config runtime/heightmap_v1.local.json --output runtime/capture_check_NEW.json
+```
+
+该检查使用合成测量平面验证旧支持域反例和扩展后的正确查询、过期与原输入尺寸；它不能证明真实雷达点密度、运动中覆盖、行走或楼梯性能。实时收件和 worker 时效须另行读取。

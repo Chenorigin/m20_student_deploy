@@ -5,6 +5,7 @@ import math
 import numpy as np
 from .contract import GRID, ROWS, COLS, N, RESOLUTION, HEIGHT_OFFSET
 from .geometry import yaw_rotation
+from .capture import capture_geometry
 
 
 def row_nanmedian(values):
@@ -46,12 +47,16 @@ class EstimatorConfig:
     max_range_m: float = 5.
     min_relative_z_m: float = -1.5
     max_relative_z_m: float = .5
+    map_capture_padding_m: float = 0.
 
     def validate(self):
         for f in fields(self):
             value = getattr(self, f.name)
             if not isinstance(value, (float, int)) or not math.isfinite(value):
                 raise ValueError("Nonfinite estimator option: " + f.name)
+            if f.name == "map_capture_padding_m":
+                capture_geometry(value)
+                continue
             if f.name == "confidence_step_ambiguity_weight":
                 if not 0 <= value <= 1:
                     raise ValueError("Confidence step ambiguity weight must be in [0,1]")
@@ -82,6 +87,7 @@ class Patch:
     cell_ends: np.ndarray = None
     block_ends: np.ndarray = None
     covariance_stamp: float = None
+    source_shape: tuple = None
 
 
 def confidence(valid, variance, age, cfg):
@@ -130,6 +136,7 @@ class ElevationMapper:
             raise ValueError("Unknown profile")
         self.profile, self.cfg, self.retain = profile, cfg or EstimatorConfig(), retain
         self.cfg.validate()
+        self.capture_grid, self.capture_shape, self.capture_half_bounds = capture_geometry(self.cfg.map_capture_padding_m)
         self.patches = deque(maxlen=self.cfg.max_packets)
         self.last_stamp = -math.inf
         self.stats = {}
@@ -141,6 +148,10 @@ class ElevationMapper:
     def ingest(self, world_points, ranges, pose, motion_std_m=0., capture_stamp=None, sample_stamps=None,
                scan_stamp=None):
         cfg = self.cfg
+        grid = self.capture_grid
+        rows, cols = self.capture_shape
+        count = len(grid)
+        bx, by = self.capture_half_bounds
         points = np.asarray(world_points, dtype=np.float64)
         ranges = np.asarray(ranges, dtype=np.float64)
         if points.ndim != 2 or points.shape[1] != 3 or ranges.shape != (len(points),):
@@ -158,21 +169,21 @@ class ElevationMapper:
         local = (points-pose.position) @ yaw_rotation(pose.yaw)
         keep = (np.isfinite(points).all(1) & np.isfinite(ranges) &
                 (ranges >= cfg.min_range_m) & (ranges <= cfg.max_range_m) &
-                (np.abs(local[:, 0]) <= .85) & (np.abs(local[:, 1]) <= .55) &
+                (np.abs(local[:, 0]) <= bx) & (np.abs(local[:, 1]) <= by) &
                 (local[:, 2] >= cfg.min_relative_z_m) & (local[:, 2] <= cfg.max_relative_z_m))
         local, points, ranges, times = local[keep], points[keep], ranges[keep], times[keep]
-        ix = np.floor((local[:, 0]+.85)/RESOLUTION).astype(int)
-        iy = np.floor((local[:, 1]+.55)/RESOLUTION).astype(int)
-        ids = iy*COLS+ix
-        keep = (ix >= 0) & (ix < COLS) & (iy >= 0) & (iy < ROWS)
+        ix = np.floor((local[:, 0]+bx)/RESOLUTION).astype(int)
+        iy = np.floor((local[:, 1]+by)/RESOLUTION).astype(int)
+        ids = iy*cols+ix
+        keep = (ix >= 0) & (ix < cols) & (iy >= 0) & (iy < rows)
         local, points, ranges, ids, times = local[keep], points[keep], ranges[keep], ids[keep], times[keep]
         order = np.argsort(ids, kind="stable")
         ids, local, points, ranges, times = ids[order], local[order], points[order], ranges[order], times[order]
-        boundaries = np.searchsorted(ids, np.arange(N+1))
-        z, var = np.zeros(N), np.zeros(N)
-        valid, blocked = np.zeros(N, dtype=bool), np.zeros(N, dtype=bool)
-        cell_stamps,block_stamps = np.full(N,capture_stamp),np.full(N,capture_stamp)
-        cell_ends,block_ends = np.full(N,capture_stamp),np.full(N,capture_stamp)
+        boundaries = np.searchsorted(ids, np.arange(count+1))
+        z, var = np.zeros(count), np.zeros(count)
+        valid, blocked = np.zeros(count, dtype=bool), np.zeros(count, dtype=bool)
+        cell_stamps,block_stamps = np.full(count,capture_stamp),np.full(count,capture_stamp)
+        cell_ends,block_ends = np.full(count,capture_stamp),np.full(count,capture_stamp)
         counts = np.diff(boundaries)
         # Diagnostics count overlapping predicates; they do not change support,
         # fit decisions or unknown-only tombstones.
@@ -207,7 +218,7 @@ class ElevationMapper:
             inliers = sample_mask & (np.abs(p[:, :, 2]-center[:, None]) <=
                                     np.maximum(cfg.outlier_floor_m, 3*mad)[:, None])
             n = inliers.sum(1)
-            xy = p[:, :, :2]-GRID[cells, None, :]
+            xy = p[:, :, :2]-grid[cells, None, :]
             mean = np.sum(np.where(inliers[:, :, None], xy, 0.), axis=1)/np.maximum(n, 1)[:, None]
             d = xy-mean[:, None, :]
             cov = np.einsum('bni,bnj,bn->bij', d, d, inliers.astype(float))/np.maximum(n, 1)[:, None, None]
@@ -291,12 +302,14 @@ class ElevationMapper:
                 cell_ends[selected[accepted]] = newest_support[accepted]
         if not self.retain or self.profile == "v0":
             self.patches.clear()
-        self.patches.append(Patch(capture_stamp, pose.stamp, np.array([*pose.position[:2], pose.yaw]), z, valid, var, blocked, pose.variance.copy(),cell_stamps,block_stamps,cell_ends,block_ends,input_stamp))
+        self.patches.append(Patch(capture_stamp, pose.stamp, np.array([*pose.position[:2], pose.yaw]), z, valid, var, blocked, pose.variance.copy(),cell_stamps,block_stamps,cell_ends,block_ends,input_stamp,self.capture_shape))
         self.stats = {"input_points": len(world_points), "roi_points": len(local), "valid_cells": int(valid.sum()),
                       "ambiguous_cells": int(blocked.sum()), "packets": len(self.patches),
                       "fit_rejections": fit_rejections,
                       "fit_rejection_counts_overlap": True,
-                      "fit_rejection_scope": "187 fitting cells before query visibility mask"}
+                      "fit_rejection_scope": str(count)+" fitting cells before query visibility mask",
+                      "capture_grid_shape": list(self.capture_shape), "capture_points": count,
+                      "map_capture_padding_m": cfg.map_capture_padding_m, "output_points": N}
 
     def snapshot(self, pose):
         cfg = self.cfg
@@ -307,9 +320,9 @@ class ElevationMapper:
             selected_end = np.full(N, np.nan)
         # Individual source timestamps survive querying and packet loss.
         def cell_times(p):
-            return p.cell_stamps if p.cell_stamps is not None else np.full(N,p.stamp)
+            return p.cell_stamps if p.cell_stamps is not None else np.full(len(p.z),p.stamp)
         def block_times(p):
-            return p.block_stamps if p.block_stamps is not None else np.full(N,p.stamp)
+            return p.block_stamps if p.block_stamps is not None else np.full(len(p.z),p.stamp)
         def cell_ends(p):
             return p.cell_ends if p.cell_ends is not None else cell_times(p)
         def block_ends(p):
@@ -322,11 +335,17 @@ class ElevationMapper:
         barrier = np.full(N,-math.inf)
         query_world = GRID @ yaw_rotation(pose.yaw)[:2, :2].T + pose.position[:2]
         for patch in self.patches:
+            rows, cols = patch.source_shape or (ROWS, COLS)
+            if ((rows, cols) != self.capture_shape or any(np.asarray(a).shape != (rows*cols,)
+                    for a in (patch.z, patch.valid, patch.variance, patch.blocked,
+                              cell_times(patch), block_times(patch), cell_ends(patch), block_ends(patch)))):
+                raise ValueError('Capture packet shape differs from configured source grid')
+            dx, dy = (cols-1)*RESOLUTION/2, (rows-1)*RESOLUTION/2
             local = (query_world-patch.anchor[:2]) @ yaw_rotation(patch.anchor[2])[:2, :2]
-            inside = (np.abs(local[:, 0]) <= .8+1e-7) & (np.abs(local[:, 1]) <= .5+1e-7)
-            ix = np.rint((local[:, 0]+.8)/RESOLUTION).astype(int).clip(0, COLS-1)
-            iy = np.rint((local[:, 1]+.5)/RESOLUTION).astype(int).clip(0, ROWS-1)
-            source = iy*COLS+ix
+            inside = (np.abs(local[:, 0]) <= dx+1e-7) & (np.abs(local[:, 1]) <= dy+1e-7)
+            ix = np.rint((local[:, 0]+dx)/RESOLUTION).astype(int).clip(0, cols-1)
+            iy = np.rint((local[:, 1]+dy)/RESOLUTION).astype(int).clip(0, rows-1)
+            source = iy*cols+ix
             measured,blocked_at = cell_times(patch)[source],block_ends(patch)[source]
             # A contradictory interval invalidates older surfaces through its
             # newest evidence. Retain this unknown-only tombstone until every

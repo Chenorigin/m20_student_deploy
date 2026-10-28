@@ -78,7 +78,8 @@
     "max_range_m": 5.0,
     "min_relative_z_m": -1.5,
     "max_relative_z_m": 0.5,
-    "confidence_step_ambiguity_weight": 0.0
+    "confidence_step_ambiguity_weight": 0.0,
+    "map_capture_padding_m": 0.6
   },
   "runtime": {
     "publish_hz": 50.0,

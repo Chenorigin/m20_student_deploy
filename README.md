@@ -1,5 +1,7 @@
 # M20 Student 模型部署工作区
 
+2026-10-28：已通过 1515 向现场 AOS/GOS 当前 release 同步扩展采集缓存并重启纯感知，模型权重和 187 点输出接口保留。真实跨板收件、资源和边界见 [部署验证报告](../rl_training/logs/evaluation/cts_hardware_capture_20261028/report.md)。配置哈希已变化，原 commissioning 凭据未改写；重进 SDK 前须退出旧策略进程并按原流程重新确认。静态存在真实缺测，动态抬腿效果未验证。
+
 新增 CTS 架构支持，使用完整学生 encoder＋共享 decoder 和独立原始命令输入。
 导出、GOS 感知契约、CPU/C++ 离线验证与新候选准备见 [CTS 部署指南](docs/CTS_DEPLOYMENT.md)。
 CTS 的强制落脚控制尚无经过验证的硬件接线，因此真机启动保持拦截；下文是原 student-v3.5 release 的记录。
