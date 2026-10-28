@@ -115,8 +115,27 @@ static void run(const std::string& scenario){
         f.policy->on_infer=[&]{f.now=.001;};f.StepWith(0,observation);
         require(f.Held(),"short inference with old snapshot failed to HOLD");f.Unpublished();
     }else if(scenario=="generation_advance_during_inference"){
-        f.policy->on_infer=[&]{Access::Generation(*f.state,1);};f.Step(0);
-        require(f.Held(),"changed generation did not HOLD");f.Unpublished();
+        f.policy->on_infer=[&]{f.now=.004;Access::Generation(*f.state,1);};f.Step(0);
+        require(!f.Held()&&f.robot->publications.size()==1,"fresh nominal phase advance incorrectly latched HOLD");
+        f.policy->on_infer=nullptr;f.now=.005;f.Step(1);
+        require(!f.Held()&&f.robot->publications.size()==2&&f.policy->inferences==1,"phase advance broke next consecutive substep");
+    }else if(scenario=="nominal_phase_boundary_sequence"){
+        for(int tick=0;tick<20;++tick){
+            f.now=tick*.005;
+            f.policy->on_execute=[&,tick]{f.now+=.004;Access::Generation(*f.state,tick+1);};
+            f.Step(tick);
+            require(!f.Held(),"consecutive fresh phase advances latched HOLD");
+        }
+        require(f.robot->publications.size()==20&&f.policy->inferences==5,"phase advance changed policy decimation");
+    }else if(scenario=="generation_advance_at_deadline"||scenario=="multiple_generation_advance"||scenario=="landing_generation_advance"){
+        if(scenario=="landing_generation_advance")f.policy->landing=true;
+        f.policy->on_infer=[&]{
+            f.now=scenario=="generation_advance_at_deadline"?.005:.004;
+            Access::Generation(*f.state,scenario=="multiple_generation_advance"?2:1);
+        };f.Step(0);require(f.Held(),"expired/skipped/landing generation was accepted");f.Unpublished();
+    }else if(scenario=="generation_regression"){
+        f.policy->on_infer=[&]{Access::Generation(*f.state,-1);};
+        f.Hard([&]{f.Step(0);});f.Unpublished();
     }else if(scenario=="noninference_snapshot_expiry"){
         f.Step(0);f.now=.005;auto observation=f.Observation();observation.snapshot_steady_s=0;
         f.StepWith(1,observation);
@@ -137,9 +156,19 @@ static void run(const std::string& scenario){
         require(f.robot->publications.size()==1&&f.robot->cached.col(1).isApprox(f.seed.col(1)),"HOLD used discarded first candidate");
         require(f.robot->cached.col(0).isApprox(f.seed.col(0))&&f.robot->cached.col(2).isApprox(f.seed.col(2)),"handoff PD changed");
         require(f.robot->cached.col(3).isZero()&&f.robot->cached.col(4).isZero()&&f.PreviousZero(),"handoff HOLD advanced action/speed");
-    }else if(scenario=="publish_returns_after_deadline"||scenario=="generation_advances_in_publish"){
+    }else if(scenario=="generation_advances_in_publish"){
+        f.robot->on_publish=[&]{f.now=.004;Access::Generation(*f.state,1);};
+        f.Step(0);require(!f.Held()&&f.robot->publications.size()==1&&f.policy->commits==1,"fresh real publication incorrectly held");
+        require(std::abs(f.policy->core.Previous()[1]-.2f)<1e-7,"real publication failed to commit Previous");
+    }else if(scenario=="publish_returns_after_deadline"||scenario=="generation_advances_in_late_publish"||scenario=="multiple_generations_in_publish"||scenario=="landing_generation_in_publish"){
         if(scenario=="publish_returns_after_deadline")f.robot->publish_duration=.005;
-        else f.robot->on_publish=[&]{Access::Generation(*f.state,1);};
+        else{
+            if(scenario=="landing_generation_in_publish")f.policy->landing=true;
+            f.robot->on_publish=[&]{
+                f.now=scenario=="generation_advances_in_late_publish"?.005:.004;
+                Access::Generation(*f.state,scenario=="multiple_generations_in_publish"?2:1);
+            };
+        }
         f.Step(0);require(f.Held()&&f.robot->publications.size()==1,"returned publication was discarded");
         const auto issued=f.robot->cached;const auto previous=f.policy->core.Previous();
         require(std::abs(previous[1]-.2f)<1e-7,"late but real publication failed to commit Previous");

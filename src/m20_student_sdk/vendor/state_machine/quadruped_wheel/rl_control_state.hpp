@@ -54,7 +54,14 @@ namespace qw {
             if(!std::isfinite(now)||!std::isfinite(snapshot)||now<snapshot||now<start)
                 throw std::runtime_error("CTS invalid snapshot/worker clock");
             servo_audit_.live=state_run_cnt_.load(std::memory_order_acquire);
-            if(servo_audit_.live!=generation)throw m20_cts::SchedulingFault("generation advanced before publication");
+            if(servo_audit_.live<generation)throw std::runtime_error("CTS servo generation regressed");
+            // A producer can wake slightly early while this immutable nominal
+            // snapshot is still within its real 5ms deadline. One successor is
+            // a phase overlap, not proof of a missed servo tick. Landing still
+            // requires an exact generation; nominal never admits two successors.
+            if(servo_audit_.live!=generation&&
+               (m20_policy_->UsesLandingControl()||servo_audit_.live!=generation+1))
+                throw m20_cts::SchedulingFault("servo generation skipped before publication");
             if(now-start>=m20_cts::servo_period_s)throw m20_cts::SchedulingFault("worker exceeded 5ms deadline");
             if(now-snapshot>=m20_cts::servo_period_s)throw m20_cts::SchedulingFault("snapshot exceeded 5ms deadline");
         }
@@ -122,7 +129,12 @@ namespace qw {
                 const bool already_held=m20_policy_->CTSNominalIsHeld();
                 m20_policy_->LatchCTSTimingHold(error.what());
                 servo_audit_.outcome=error.what();
-                if(!already_held)std::cerr<<"[CTS_TIMING_HOLD] "<<error.what()<<"; support retained; re-entry required"<<std::endl;
+                if(!already_held)std::cerr<<"[CTS_TIMING_HOLD] "<<error.what()
+                    <<"; selected_generation="<<generation<<" live_generation="<<servo_audit_.live
+                    <<" worker_ms="<<(now()-start)*1000
+                    <<" snapshot_ms="<<(now()-observation.snapshot_steady_s)*1000
+                    <<" inferred="<<servo_audit_.inferred<<" published="<<servo_audit_.published
+                    <<"; support retained; re-entry required"<<std::endl;
             }
             servo_audit_.end=now();
         }
@@ -248,6 +260,9 @@ namespace qw {
                 exit(0);
             }
             policy_ptr_->DisplayPolicyInfo();
+            if(m20_policy_->IsCTS())std::cout<<"[CTS_SCHEDULING] phase_guard=v2 nominal_successor_overlap="
+                <<(m20_policy_->UsesLandingControl()?"disabled":"enabled")
+                <<" snapshot_deadline_ms=5 worker_deadline_ms=5"<<std::endl;
         }
 
         ~RLControlState() {

@@ -15,13 +15,14 @@ public:
     nlohmann::json robot;
     StudentControlCore core;
     int inferences=0,commits=0,flushes=0;
+    bool landing=false;
     std::array<float,16> action{};
     std::function<void()> on_infer,on_execute,on_commit;
     M20PolicyRunner(const std::string&,const std::string&):robot(ReadRobot()),core(robot){core.RequirePublicationCommit();}
     void OnEnter()override{}
     void SetStandingHandoff(const types::MatXf& command){core.Begin(command);}
     bool IsCTS()const{return true;}
-    bool UsesLandingControl()const{return false;}
+    bool UsesLandingControl()const{return landing;}
     void CheckCTSBody(const types::RobotBasicState& state)const{core.CheckBody(state,.04);}
     bool CTSNominalIsHeld()const{return core.Latched();}
     void LatchCTSTimingHold(const std::string& reason){(void)core.Hold(reason);}
