@@ -202,9 +202,20 @@ def test_dual_input_gate_and_embedded_control(metadata, tmp_path):
         CTSInference(tmp_path / "policy.onnx", sidecar)
 
 
-@pytest.mark.parametrize("version", ["m20_cts_action_latent_v2", "m20_cts_action_latent_v8", "m20_cts_action_latent_v10", "m20_cts_action_latent_v13", "m20_cts_action_latent_v14"])
+@pytest.mark.parametrize("version", ["m20_cts_action_latent_v2", "m20_cts_action_latent_v8", "m20_cts_action_latent_v10", "m20_cts_action_latent_v13", "m20_cts_action_latent_v14", "m20_cts_action_latent_v15"])
 def test_supported_training_versions_preserve_execution_guards(metadata, tmp_path, version):
     metadata["cts_version"] = version
+    if version == 'm20_cts_action_latent_v15':
+        metadata['software_joint_limits'] = {
+            'version': 1, 'normalized_action_clip': [-100., 100.],
+            'joint_names': [f'{leg}_{joint}_joint' for leg in ('fl','fr','hl','hr')
+                            for joint in ('hipx','hipy','knee')],
+            'target_bounds_rad': [[-1., 1.]] * 12,
+            'feedback_bounds_rad': [[-1., 1.]] * 12,
+            'default_position_rad': [0.] * 12, 'action_scale': [.25] * 12,
+            'margin_fraction': .1, 'target_cost_weight': 1., 'feedback_cost_weight': 1.,
+            'student_loss_weight': 1., 'source_robot_sha256': '0' * 64}
+        metadata['software_joint_limits_sha256'] = canonical_hash(metadata['software_joint_limits'])
     path = tmp_path / "contract.json"
     path.write_text(json.dumps(metadata))
     validate_model_contract(path, contract("v1", 4))
@@ -217,10 +228,49 @@ def test_supported_training_versions_preserve_execution_guards(metadata, tmp_pat
         validate_model_contract(path, contract("v1", 4))
 
 
-@pytest.mark.parametrize("version", ["m20_cts_action_latent_v15", "m20_cts_action_latent_v9", "m20_cts_action_latent_v1", None])
+@pytest.mark.parametrize("version", ["m20_cts_action_latent_v16", "m20_cts_action_latent_v9", "m20_cts_action_latent_v1", None])
 def test_unvalidated_training_versions_are_rejected(metadata, tmp_path, version):
     metadata["cts_version"] = version
+    if version == 'm20_cts_action_latent_v15':
+        metadata['software_joint_limits'] = {
+            'version': 1, 'normalized_action_clip': [-100., 100.],
+            'joint_names': [f'{leg}_{joint}_joint' for leg in ('fl','fr','hl','hr')
+                            for joint in ('hipx','hipy','knee')],
+            'target_bounds_rad': [[-1., 1.]] * 12,
+            'feedback_bounds_rad': [[-1., 1.]] * 12,
+            'default_position_rad': [0.] * 12, 'action_scale': [.25] * 12,
+            'margin_fraction': .1, 'target_cost_weight': 1., 'feedback_cost_weight': 1.,
+            'student_loss_weight': 1., 'source_robot_sha256': '0' * 64}
+        metadata['software_joint_limits_sha256'] = canonical_hash(metadata['software_joint_limits'])
     path = tmp_path / "contract.json"
     path.write_text(json.dumps(metadata))
     with pytest.raises(ValueError, match="contract mismatch"):
         validate_model_contract(path, contract("v1", 4))
+
+
+def test_v15_requires_software_limit_metadata(metadata):
+    from m20_heightmap.cts import validate_cts_contract
+    metadata['cts_version'] = 'm20_cts_action_latent_v15'
+    with pytest.raises(ValueError, match='software joint-limit'):
+        validate_cts_contract(metadata)
+
+
+@pytest.mark.parametrize('change', ['missing', 'scale', 'bounds', 'digest', 'margin', 'nan'])
+def test_v15_rejects_corrupt_limit_contract(metadata, change):
+    from m20_heightmap.cts import validate_cts_contract
+    limits = {'version': 1, 'normalized_action_clip': [-100., 100.],
+              'joint_names': [f'{leg}_{joint}_joint' for leg in ('fl','fr','hl','hr')
+                              for joint in ('hipx','hipy','knee')],
+              'target_bounds_rad': [[-1., 1.]] * 12, 'feedback_bounds_rad': [[-1., 1.]] * 12,
+              'default_position_rad': [0.] * 12, 'action_scale': [.25] * 12,
+              'margin_fraction': .1, 'target_cost_weight': 1., 'feedback_cost_weight': 1.,
+              'student_loss_weight': 1., 'source_robot_sha256': '0' * 64}
+    if change == 'missing': del limits['action_scale']
+    if change == 'scale': limits['action_scale'][0] = -1
+    if change == 'bounds': limits['target_bounds_rad'][0] = [-2., 2.]
+    if change == 'margin': limits['margin_fraction'] = .5
+    metadata.update(cts_version='m20_cts_action_latent_v15', software_joint_limits=limits,
+                    software_joint_limits_sha256=canonical_hash(limits))
+    if change == 'digest': metadata['software_joint_limits_sha256'] = '0' * 64
+    if change == 'nan': limits['target_cost_weight'] = float('nan')
+    with pytest.raises(ValueError): validate_cts_contract(metadata)

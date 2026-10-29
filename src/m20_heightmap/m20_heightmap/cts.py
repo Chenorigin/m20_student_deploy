@@ -11,8 +11,8 @@ import numpy as np
 
 FAMILY = "m20_cts_student"
 VERSION = "m20_cts_action_latent_v2"
-# Validated v8/v10/v13 training changes preserve the nominal inference ABI.
-SUPPORTED_VERSIONS = (VERSION, "m20_cts_action_latent_v8", "m20_cts_action_latent_v10", "m20_cts_action_latent_v13", "m20_cts_action_latent_v14")
+# Validated training changes through v15 preserve the nominal inference ABI.
+SUPPORTED_VERSIONS = (VERSION, "m20_cts_action_latent_v8", "m20_cts_action_latent_v10", "m20_cts_action_latent_v13", "m20_cts_action_latent_v14", "m20_cts_action_latent_v15")
 INPUTS = {"obs": [1, 789], "raw_command": [1, 3]}
 HARDWARE_REASON = ("CTS requires mandatory StairQuiet landing control at every 5ms substep; "
                    "the SDK has no validated contact/actuator binding. Hardware startup is blocked. "
@@ -58,7 +58,49 @@ def validate_cts_contract(actual):
     if perception.get("front_only") is not True:
         raise ValueError("CTS requires the saved front-only perception contract")
     front_mask(actual)
+    if actual['cts_version'] == 'm20_cts_action_latent_v15':
+        limits = actual.get('software_joint_limits')
+        if (not isinstance(limits, dict) or limits.get('version') != 1
+                or canonical_hash(limits) != actual.get('software_joint_limits_sha256')
+                or limits.get('normalized_action_clip') != [-100., 100.]):
+            raise ValueError('CTS software joint-limit contract missing or changed')
+        validate_software_joint_limits(limits)
     return actual
+
+
+def validate_software_joint_limits(limits):
+    """Self-contained mirror of the training v1 schema; no training dependency."""
+    keys = {'version', 'joint_names', 'target_bounds_rad', 'feedback_bounds_rad',
+            'default_position_rad', 'action_scale', 'normalized_action_clip',
+            'margin_fraction', 'target_cost_weight', 'feedback_cost_weight',
+            'student_loss_weight', 'source_robot_sha256'}
+    names = [f'{leg}_{joint}_joint' for leg in ('fl', 'fr', 'hl', 'hr')
+             for joint in ('hipx', 'hipy', 'knee')]
+    if (set(limits) != keys or limits['version'] != 1 or limits['joint_names'] != names
+            or limits['normalized_action_clip'] != [-100., 100.]):
+        raise ValueError('CTS software joint-limit schema/order changed')
+    def vector(key, shape):
+        value = np.asarray(limits[key])
+        if value.shape != shape or value.dtype.kind not in 'fi' or not np.isfinite(value).all():
+            raise ValueError('CTS invalid software joint-limit field: ' + key)
+        return value
+    target = vector('target_bounds_rad', (12, 2))
+    feedback = vector('feedback_bounds_rad', (12, 2))
+    default = vector('default_position_rad', (12,))
+    scale = vector('action_scale', (12,))
+    if (np.any(scale <= 0) or np.any(feedback[:, 0] > target[:, 0])
+            or np.any(target[:, 0] >= default) or np.any(default >= target[:, 1])
+            or np.any(target[:, 1] > feedback[:, 1])):
+        raise ValueError('CTS software joint-limit mapping/bounds disagree')
+    for key in ('margin_fraction', 'target_cost_weight', 'feedback_cost_weight', 'student_loss_weight'):
+        value = limits[key]
+        if type(value) not in (int, float) or not np.isfinite(value) or value <= 0:
+            raise ValueError('CTS invalid software joint-limit cost: ' + key)
+    if limits['margin_fraction'] >= .5:
+        raise ValueError('CTS invalid software joint-limit margin')
+    digest = limits['source_robot_sha256']
+    if not isinstance(digest, str) or len(digest) != 64 or any(c not in '0123456789abcdef' for c in digest):
+        raise ValueError('CTS software joint-limit source digest missing')
 
 
 def front_mask(actual):

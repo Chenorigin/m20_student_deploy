@@ -43,6 +43,9 @@ def export(checkpoint, training, output):
                   command_feedback=deepcopy(meta["command_feedback"]),
                   perception=deepcopy(meta["perception"]), quiet_execution_control=control,
                   quiet_execution_control_sha256=canonical_hash(control))
+    if 'joint_limits' in meta['config']:
+        actual['software_joint_limits'] = deepcopy(meta['config']['joint_limits'])
+        actual['software_joint_limits_sha256'] = canonical_hash(actual['software_joint_limits'])
     if actual["quiet_execution_control_sha256"] != meta["quiet_execution_control_sha256"]:
         raise ValueError("Saved CTS execution digest mismatch")
     output.mkdir(parents=True, exist_ok=True)
