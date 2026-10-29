@@ -92,7 +92,7 @@
     ],
     "previous_action": "previous issued normalized 16D action; not mapped joint target",
     "runtime_noise_injection": false,
-    "joint_target_position_clip_enabled": true,
+    "joint_target_position_clip_enabled": false,
     "wheel_target_velocity_clip_enabled": false,
     "hold_enabled": false,
     "max_tick_interval_s": 0.03
@@ -424,7 +424,7 @@
       15,
       50
     ],
-    "software_limit_source": "MuJoCo XML named-joint ranges bound standing handoff, nominal leg targets and measured feedback. Leg targets are clipped to the existing range before validation; wheel target clipping and leg slew remain disabled. Stored velocity envelopes are dormant rollback values. Hardware/firmware limits have not been measured.",
+    "software_limit_source": "MuJoCo XML named-joint ranges are used for standing handoff and measured-state envelope only. Both additional position/velocity target clip switches are false, including the processed-target clip. Stored velocity envelopes are dormant rollback values; they are not MuJoCo target limits. Hardware/firmware effort and speed protection has not been measured.",
     "software_feedback_position_limits_sdk_rad": [
       [
         -0.436,
@@ -564,7 +564,7 @@
     "mujoco_model_sha256": "98ac70602d930dac0f0b65124309c59c9c98cca9186f071262981e0e32bceb7a",
     "controller_source": "/home/ubuntu/cyq_shixi_projects/rl_training/deploy/deploy_mujoco/deploy_mujoco.py",
     "controller_sha256": "0e4280fe31010ce0d1e84f2efa68fea222d52737cf737d866069ad3625f3d50a",
-    "leg_target": "default + scale * clip(raw, -100, 100), then clip leg position to the existing SDK software position range; no slew",
+    "leg_target": "default + scale * clip(raw, -100, 100), no additional target clipping or slew",
     "wheel_target": "5 * clip(raw, -100, 100), no additional target clipping",
     "feedback_range_source": "MuJoCo named-joint range; continuous wheels excluded by existing CheckBody",
     "real_joint_coordinates_independently_measured": false,
