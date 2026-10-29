@@ -70,6 +70,21 @@ int main(int argc,char** argv){
  unsafe=safe;unsafe.goal_joint_vel[3]=NAN;
  results["nominal_nonfinite_command_rejected"]=rejects([&]{c.ValidateTarget(unsafe);});
  results["nominal_target_validation_does_not_change_pd_or_targets"]=safe.ConvertToMat().isApprox(c.Map(std::array<float,16>{}.data(),.02).ConvertToMat());
+ // Recorded CTS500 stair-approach action, through the production core.
+ auto trial=robot;trial["policy"]["leg_target_slew_enabled"]=false;
+ trial["policy"]["hold_enabled"]=false;trial["policy"]["wheel_target_velocity_clip_enabled"]=false;
+ trial["policy"]["joint_target_position_clip_enabled"]=false;
+ float recorded[16]={-.5104045868f,.1784282625f,7.741825104f,-2.660000801f,-.375430882f,-.192308158f,5.273115158f,-3.395245314f,-.064778179f,-.271706462f,.049505819f,-.658903658f,-1.237753868f,-1.507442713f,-4.419363022f,-2.426994085f};
+ StudentControlCore no_clip(trial);no_clip.Begin(seed);auto original=no_clip.Map(recorded,.02);
+ results["recorded_unclipped_target_rejected"]=rejects([&]{no_clip.ValidateTarget(original);})&&std::abs(original.goal_joint_pos(8)-.6591394f)<1e-6;
+ trial["policy"]["joint_target_position_clip_enabled"]=true;
+ StudentControlCore bounded(trial);bounded.Begin(seed);auto clipped=bounded.Map(recorded,.02);
+ results["recorded_clipped_target_admitted"]=!rejects([&]{bounded.ValidateTarget(clipped);})&&std::abs(clipped.goal_joint_pos(8)-.611f)<1e-6;
+ results["recorded_clipping_preserves_wheels_gains"]=clipped.goal_joint_vel.isApprox(original.goal_joint_vel)&&clipped.kp.isApprox(original.kp)&&clipped.kd.isApprox(original.kd);
+ ro.joint_pos=seed.col(1);ro.joint_pos(8)=.612f;ro.body_receive_age_s=.001;
+ results["recorded_clipping_retains_measured_protection"]=rejects([&]{bounded.CheckBody(ro,.04);});
+ ro.joint_pos=seed.col(1);ro.body_receive_age_s=.05;
+ results["recorded_clipping_retains_stale_protection"]=rejects([&]{bounded.CheckBody(ro,.04);});
  int ok=0,badn=0;for(auto& val:results.items())(val.value().get<bool>()?ok:badn)++;
  std::cout<<nlohmann::json{{"ok",ok},{"bad",badn},{"results",results}}.dump(2)<<std::endl;return badn?1:0;
 }
