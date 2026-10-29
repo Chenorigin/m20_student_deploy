@@ -13,6 +13,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 SDK = ROOT / 'src/m20_student_sdk'
 SCENARIOS = [
+    'worker_target_fault_latches', 'worker_measured_fault_latches', 'worker_invalid_body_fatal',
     'nohold_discard_then_fresh_support', 'nohold_late_published_retained',
     'nohold_missing_tick_recovers', 'nohold_first_tick_missed',
     'nohold_body_expired', 'nohold_bad_action', 'nohold_target_outside_limits',

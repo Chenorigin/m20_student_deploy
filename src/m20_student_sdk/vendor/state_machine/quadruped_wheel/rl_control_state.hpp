@@ -250,6 +250,15 @@ namespace qw {
                             if(!start_flag_.load(std::memory_order_acquire))break;
                             ri_ptr_->SetJointCommand(res);
                         }
+                    }catch(const PositionLimitFault& error){
+                        // Stop the worker before exposing the recoverable latch.
+                        start_flag_.store(false,std::memory_order_release);
+                        uc_ptr_->policy_recovery.Latch();
+                        policy_fault_.store(true,std::memory_order_release);
+                        servo_audit_.outcome=std::string("recoverable position fault: ")+error.what();
+                        servo_audit_.end=m20_cts::SteadySeconds();
+                        std::cerr<<"[STUDENT_RECOVERABLE_FAULT] "<<error.what()
+                          <<"; damping locked; R1 acknowledge then separate R2 reset after healthy idle"<<std::endl;
                     }catch(const std::exception& error){
                         servo_audit_.outcome=std::string("hard fault: ")+error.what();
                         servo_audit_.end=m20_cts::SteadySeconds();
@@ -301,6 +310,21 @@ namespace qw {
             if (run_policy_thread_.joinable()) {
                 run_policy_thread_.join();
             }
+        }
+
+        bool RecoveryBodySafe() override {
+            try {
+                auto c=ri_ptr_->GetCoherentRobotState();
+                RobotBasicState s;
+                s.snapshot_steady_s=c.snapshot_steady_s;s.body_receive_age_s=c.body_receive_age_s;
+                s.base_rpy=c.base_rpy;s.base_omega=c.base_omega;s.base_acc=c.base_acc;
+                s.base_rot_mat=RpyToRm(s.base_rpy);
+                s.joint_pos=c.joint_pos;s.joint_vel=c.joint_vel;s.joint_tau=c.joint_tau;
+                s.landing_feedback=m20_policy_->UsesLandingControl()?ri_ptr_->GetLandingFeedback():m20_cts::LandingFeedback{};
+                m20_policy_->CheckCTSBody(s);
+                return s.base_rpy.allFinite()&&s.base_acc.allFinite()&&
+                    std::abs(s.base_rpy(0))<=30./180.*M_PI&&std::abs(s.base_rpy(1))<=45./180.*M_PI;
+            } catch(...) {return false;}
         }
 
         virtual void OnEnter() {

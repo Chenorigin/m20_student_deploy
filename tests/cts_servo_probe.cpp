@@ -112,6 +112,16 @@ static void run(const std::string& scenario){
     }else if(scenario=="nohold_clock_regression"){
         f.policy->on_infer=[&]{f.now=.005;};f.Step(0);f.Unpublished();
         f.policy->on_infer=nullptr;f.now=-.001;f.Hard([&]{f.Step(1);});f.Unpublished();
+    }else if(scenario=="worker_target_fault_latches"||scenario=="worker_measured_fault_latches"||scenario=="worker_invalid_body_fatal"){
+        unsetenv("M20_CTS_WORKER_CPU");unsetenv("M20_CTS_WORKER_FIFO_PRIORITY");
+        f.now=m20_cts::SteadySeconds();f.robot->state=f.Observation();
+        if(scenario=="worker_target_fault_latches")f.policy->action[0]=100.f;
+        if(scenario=="worker_measured_fault_latches")f.robot->state.joint_pos(0)=10.f;
+        if(scenario=="worker_invalid_body_fatal")f.robot->state.joint_pos(0)=NAN;
+        f.state->Run();Access::Generation(*f.state,0);
+        Access::Worker(*f.state);
+        require(f.state->LoseControlJudge(),"worker did not request damping");f.Unpublished();
+        require(f.command->policy_recovery.Active()==(scenario!="worker_invalid_body_fatal"),"typed fault classification wrong");
     }else if(scenario=="worker_scheduling_failure"){
         setenv("M20_CTS_WORKER_CPU","invalid",1);setenv("M20_CTS_WORKER_FIFO_PRIORITY","20",1);
         Access::Worker(*f.state);require(f.state->LoseControlJudge(),"worker scheduling failure did not request safe exit");f.Unpublished();

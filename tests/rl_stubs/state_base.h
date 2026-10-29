@@ -21,4 +21,5 @@ public:
     StateBase(RobotName robot,std::string name,std::shared_ptr<ControllerData> data):
         robot_name_(robot),state_name_(std::move(name)),ri_ptr_(data->ri_ptr),uc_ptr_(data->uc_ptr){}
     virtual ~StateBase()=default;
+    virtual bool RecoveryBodySafe(){return false;}
 };

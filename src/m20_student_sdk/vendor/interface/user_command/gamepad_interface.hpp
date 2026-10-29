@@ -103,6 +103,12 @@ public:
     }
 
     void Stop() override {}
+    void CancelRecoveryMotion() override {
+        std::lock_guard<std::mutex> lock(packet_mutex_);
+        usr_cmd_->target_mode=uint8_t(RobotMotionState::JointDamping);
+        usr_cmd_->forward_vel_scale=usr_cmd_->side_vel_scale=usr_cmd_->turnning_vel_scale=0;
+        wake_guard_.ObserveLieDown();
+    }
     UserCommand* GetUserCommand() override {
         std::lock_guard<std::mutex> lock(packet_mutex_);
         // A live handset heartbeat does not renew an old joystick target.
@@ -110,6 +116,10 @@ public:
             usr_cmd_->forward_vel_scale = 0.0f;
             usr_cmd_->side_vel_scale = 0.0f;
             usr_cmd_->turnning_vel_scale = 0.0f;
+        }
+        if(policy_recovery.Active()){
+            usr_cmd_->target_mode=uint8_t(RobotMotionState::JointDamping);
+            usr_cmd_->forward_vel_scale=usr_cmd_->side_vel_scale=usr_cmd_->turnning_vel_scale=0;
         }
         return usr_cmd_;
     }
@@ -440,6 +450,26 @@ private:
                                                                   {"G20_KEY_R2", KeyCode::R2}};
 
         if (items.contains("KeyList") && items["KeyList"].is_array()) {
+            if(policy_recovery.Active()){
+                // Exact single-key packets: combinations cannot acknowledge and
+                // reset together. R1 is confirmation here, never powered lie-down.
+                usr_cmd_->target_mode=uint8_t(RobotMotionState::JointDamping);
+                usr_cmd_->forward_vel_scale=usr_cmd_->side_vel_scale=usr_cmd_->turnning_vel_scale=0;
+                wake_guard_.ObserveLieDown();
+                const auto& keys=items["KeyList"];
+                if(CommandFresh(cmd_info)&&!ignore_motion_keys_this_packet_&&keys.size()==1&&keys[0].is_string()){
+                    const auto key=keys[0].get<std::string>();
+                    if(key=="G20_KEY_R1"){
+                        const bool accepted=policy_recovery.Acknowledge(std::chrono::steady_clock::now());
+                        std::cout<<(accepted?"[STUDENT_RECOVERY_ACK] R1 accepted; separate R2 required":
+                            "[STUDENT_RECOVERY_WAIT] not healthy idle for 2s; wait then press R1 again")<<std::endl;
+                    }else if(key=="G20_KEY_R2"&&policy_recovery.Reset(std::chrono::steady_clock::now())){
+                        wake_guard_.ObserveR2(std::chrono::steady_clock::now(),true);
+                        std::cout<<"[STUDENT_RECOVERY_READY] fault cleared to idle; fresh L1 then L2 required"<<std::endl;
+                    }
+                }
+                res=buildResponse(cmd_info,0,"Fault recovery: R1 then R2; healthy idle required");return;
+            }
             // Damping wins even if a packet contains both R2 and L1.
             for (const auto& key : items["KeyList"]) {
                 if (key.is_string() && key.get<std::string>() == "G20_KEY_R2") {
@@ -472,6 +502,12 @@ private:
                         KeyCode code = keyMap[keyStr];
                         switch (code) {
                             case KeyCode::L1:
+                                if(!policy_recovery.StandAllowed(std::chrono::steady_clock::now())){
+                                    usr_cmd_->target_mode=uint8_t(RobotMotionState::JointDamping);
+                                    wake_guard_.ObserveLieDown();
+                                    std::cout<<"[STUDENT_RECOVERY_WAIT] stand rejected; wait healthy idle then R2 and fresh L1"<<std::endl;
+                                    break;
+                                }
                                 if (ignore_motion_keys_this_packet_ ||
                                     !wake_guard_.StandArmed()) {
                                     std::cout << "[SAFETY] Ignoring L1 until a settled heartbeat "

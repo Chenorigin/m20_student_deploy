@@ -4,6 +4,8 @@
 #include <array>
 #include <stdexcept>
 
+class PositionLimitFault : public std::runtime_error {public: using std::runtime_error::runtime_error;};
+
 // Pure command shaping, shared by the real runner and offline tests. No I/O.
 class StudentControlCore {
   nlohmann::json robot_;
@@ -59,7 +61,7 @@ public:
           ?hardware.at("software_feedback_position_limits_sdk_rad").at(j)
           :hardware.at("software_position_limits_sdk_rad").at(j);
       if(ro.joint_pos(j)<limits[0].get<float>()||ro.joint_pos(j)>limits[1].get<float>())
-        throw std::runtime_error("measured position outside software feedback limits: joint="+std::to_string(j)+
+        throw PositionLimitFault("measured position outside software feedback limits: joint="+std::to_string(j)+
           " q="+std::to_string(ro.joint_pos(j))+" lower="+std::to_string(limits[0].get<float>())+
           " upper="+std::to_string(limits[1].get<float>()));
     }
@@ -80,7 +82,7 @@ public:
     for(int j=0;j<16;++j)if(j%4!=3){
       const auto& bounds=robot_.at("hardware").at("software_position_limits_sdk_rad").at(j);
       if(target.goal_joint_pos[j]<bounds[0].get<float>()||target.goal_joint_pos[j]>bounds[1].get<float>())
-        throw std::runtime_error("CTS nominal target outside software position limits");
+        throw PositionLimitFault("CTS nominal target outside software position limits");
     }
   }
   types::RobotAction Map(const float* action,double elapsed_s) {

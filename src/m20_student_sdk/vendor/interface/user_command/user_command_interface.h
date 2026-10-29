@@ -13,6 +13,7 @@
 #include "common_types.h"
 #include "custom_types.h"
 #include "motion_state_feedback.hpp"
+#include "policy_fault_recovery.hpp"
 
 using namespace types;
 
@@ -54,6 +55,9 @@ public:
     virtual void SetMotionStateFeedback(MotionStateFeedback* msfb){
         msfb_ = msfb;
     }
+
+    virtual void CancelRecoveryMotion(){usr_cmd_->target_mode=uint8_t(RobotMotionState::JointDamping);}
+    m20::PolicyFaultRecovery policy_recovery;
 
     MotionStateFeedback *msfb_ = nullptr;
     RobotName robot_name_;

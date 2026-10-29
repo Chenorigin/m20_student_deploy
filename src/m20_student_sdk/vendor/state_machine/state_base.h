@@ -73,6 +73,7 @@ public:
      * @return StateName    next state name
      */
     virtual StateName GetNextStateName() = 0;
+    virtual bool RecoveryBodySafe(){return false;}
 
     /**
      * @brief state name for print 

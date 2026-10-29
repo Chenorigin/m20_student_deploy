@@ -130,6 +130,14 @@ public:
             if (set_timer.time_interrupt()) {
                 ri_ptr_->RefreshRobotData();
 
+                // Recovery health is valid only in unpowered idle, after the
+                // damping transition has joined/revoked the policy worker.
+                const auto command=uc_ptr_->GetUserCommand();
+                const double input_age=std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count()-command->time_stamp;
+                const bool recovery_safe=current_state_name_==StateName::kIdle && command->safe_control_mode==0 &&
+                    std::isfinite(input_age)&&input_age>=0&&input_age<=.5 &&
+                    GetStateControllerPtr(StateName::kRLControl)->RecoveryBodySafe();
+                uc_ptr_->policy_recovery.Health(std::chrono::steady_clock::now(),recovery_safe);
                 current_controller_->Run();
 
                 if (current_controller_->LoseControlJudge()){
@@ -139,6 +147,11 @@ public:
                     next_state_name_ = current_controller_->GetNextStateName();
                 }
 
+                if(current_state_name_==StateName::kIdle && next_state_name_==StateName::kStandUp &&
+                   !uc_ptr_->policy_recovery.StandAllowed(std::chrono::steady_clock::now())){
+                    next_state_name_=StateName::kIdle;
+                    uc_ptr_->CancelRecoveryMotion();
+                }
                 if (next_state_name_ != current_state_name_) {
                     current_controller_->OnExit();
                     std::cout << current_controller_->state_name_ << " ------------> ";
