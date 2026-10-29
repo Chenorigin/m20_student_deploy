@@ -202,7 +202,7 @@ def test_dual_input_gate_and_embedded_control(metadata, tmp_path):
         CTSInference(tmp_path / "policy.onnx", sidecar)
 
 
-@pytest.mark.parametrize("version", ["m20_cts_action_latent_v2", "m20_cts_action_latent_v8", "m20_cts_action_latent_v10"])
+@pytest.mark.parametrize("version", ["m20_cts_action_latent_v2", "m20_cts_action_latent_v8", "m20_cts_action_latent_v10", "m20_cts_action_latent_v13"])
 def test_supported_training_versions_preserve_execution_guards(metadata, tmp_path, version):
     metadata["cts_version"] = version
     path = tmp_path / "contract.json"
@@ -217,7 +217,7 @@ def test_supported_training_versions_preserve_execution_guards(metadata, tmp_pat
         validate_model_contract(path, contract("v1", 4))
 
 
-@pytest.mark.parametrize("version", ["m20_cts_action_latent_v9", "m20_cts_action_latent_v1", None])
+@pytest.mark.parametrize("version", ["m20_cts_action_latent_v14", "m20_cts_action_latent_v9", "m20_cts_action_latent_v1", None])
 def test_unvalidated_training_versions_are_rejected(metadata, tmp_path, version):
     metadata["cts_version"] = version
     path = tmp_path / "contract.json"
