@@ -202,10 +202,10 @@ def test_dual_input_gate_and_embedded_control(metadata, tmp_path):
         CTSInference(tmp_path / "policy.onnx", sidecar)
 
 
-@pytest.mark.parametrize("version", ["m20_cts_action_latent_v2", "m20_cts_action_latent_v8", "m20_cts_action_latent_v10", "m20_cts_action_latent_v13", "m20_cts_action_latent_v14", "m20_cts_action_latent_v15"])
+@pytest.mark.parametrize("version", ["m20_cts_action_latent_v2", "m20_cts_action_latent_v8", "m20_cts_action_latent_v10", "m20_cts_action_latent_v13", "m20_cts_action_latent_v14", "m20_cts_action_latent_v15", "m20_cts_action_latent_v24"])
 def test_supported_training_versions_preserve_execution_guards(metadata, tmp_path, version):
     metadata["cts_version"] = version
-    if version == 'm20_cts_action_latent_v15':
+    if version in ('m20_cts_action_latent_v15', 'm20_cts_action_latent_v24'):
         metadata['software_joint_limits'] = {
             'version': 1, 'normalized_action_clip': [-100., 100.],
             'joint_names': [f'{leg}_{joint}_joint' for leg in ('fl','fr','hl','hr')
@@ -274,3 +274,10 @@ def test_v15_rejects_corrupt_limit_contract(metadata, change):
     if change == 'digest': metadata['software_joint_limits_sha256'] = '0' * 64
     if change == 'nan': limits['target_cost_weight'] = float('nan')
     with pytest.raises(ValueError): validate_cts_contract(metadata)
+
+
+def test_v24_requires_complete_software_limit_contract(metadata):
+    from m20_heightmap.cts import validate_cts_contract
+    metadata["cts_version"] = "m20_cts_action_latent_v24"
+    with pytest.raises(ValueError, match="software joint-limit"):
+        validate_cts_contract(metadata)

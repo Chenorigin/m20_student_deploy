@@ -14,6 +14,7 @@ VERSION = "m20_cts_action_latent_v2"
 # Validated training changes through v15 preserve the nominal inference ABI.
 SUPPORTED_VERSIONS = (VERSION, "m20_cts_action_latent_v8", "m20_cts_action_latent_v10", "m20_cts_action_latent_v13", "m20_cts_action_latent_v14", "m20_cts_action_latent_v15")
 INPUTS = {"obs": [1, 789], "raw_command": [1, 3]}
+SUPPORTED_VERSIONS += ("m20_cts_action_latent_v24",)
 HARDWARE_REASON = ("CTS requires mandatory StairQuiet landing control at every 5ms substep; "
                    "the SDK has no validated contact/actuator binding. Hardware startup is blocked. "
                    "Use offline_cts.py or the training deploy_cts_student.py simulation runtime.")
@@ -58,7 +59,7 @@ def validate_cts_contract(actual):
     if perception.get("front_only") is not True:
         raise ValueError("CTS requires the saved front-only perception contract")
     front_mask(actual)
-    if actual['cts_version'] == 'm20_cts_action_latent_v15':
+    if actual['cts_version'] in ('m20_cts_action_latent_v15', 'm20_cts_action_latent_v24'):
         limits = actual.get('software_joint_limits')
         if (not isinstance(limits, dict) or limits.get('version') != 1
                 or canonical_hash(limits) != actual.get('software_joint_limits_sha256')
