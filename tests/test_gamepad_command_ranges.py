@@ -28,8 +28,8 @@ def test_actual_gamepad_matches_mujoco_ranges(tmp_path):
     assert result.returncode == 0, result.stdout + result.stderr
     report = next(json.loads(line) for line in result.stdout.splitlines()
                   if line.startswith('{') and '"checks"' in line)
-    assert report['passed'] and report['checks'] == 36 and report['motor_commands'] == 0
-    # The same real parser must reject the previous wider range as a match.
+    assert report['passed'] and report['checks'] == 63 and report['motor_commands'] == 0
+    # Legacy wider site configuration must not widen the deployed teleop envelope.
     old = json.loads((ROOT / 'deploy/robot.json').read_text())
     old['command_operator_ranges'] = {'lin_vel_x': [-1.2, 1.2],
                                       'lin_vel_y': [-.7, .7], 'ang_vel_z': [-1., 1.]}
@@ -38,4 +38,17 @@ def test_actual_gamepad_matches_mujoco_ranges(tmp_path):
     env['M20_ROBOT_CONFIG'] = str(fixture)
     result = subprocess.run([str(exe)], env=env, capture_output=True, text=True,
                             timeout=10, preexec_fn=limits)
-    assert result.returncode != 0 and 'differs from MuJoCo' in result.stderr
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert '[COMMAND_RANGES] effective=' in result.stdout
+
+    narrow = json.loads(fixture.read_text())
+    narrow['command_operator_ranges'] = {'lin_vel_x': [-.2, .2],
+        'lin_vel_y': [-.3, .3], 'ang_vel_z': [-.4, .4]}
+    fixture.write_text(json.dumps(narrow))
+    result = subprocess.run([str(exe), '.2', '.3', '.4'], env=env,
+        capture_output=True, text=True, timeout=10, preexec_fn=limits)
+    assert result.returncode == 0, result.stdout + result.stderr
+    env.pop('M20_ROBOT_CONFIG')
+    result = subprocess.run([str(exe)], env=env, capture_output=True,
+        text=True, timeout=10, preexec_fn=limits)
+    assert result.returncode == 0, result.stdout + result.stderr

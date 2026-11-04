@@ -335,7 +335,10 @@ public:
       std::cout<<"[CTS_WARMUP] runs=8 first_ms="<<first_ms<<" last_ms="<<last_ms
                <<" outputs_discarded=true"<<std::endl;
     }
-    control_=std::make_unique<StudentControlCore>(robot_);
+    // CTS nominal deployment never latches a policy HOLD, including when an
+    // older site robot.json still requests hold_enabled=true. Hard faults keep
+    // their existing exception/stop path; no stale action is newly published.
+    control_=std::make_unique<StudentControlCore>(robot_,cts_&&cts_nominal_pd_);
     if(!control_->HoldsEnabled()&&(!cts_||!cts_nominal_pd_))
       throw std::runtime_error("HOLD-disabled recovery requires CTS nominal_pd");
     if(!control_->HoldsEnabled()){

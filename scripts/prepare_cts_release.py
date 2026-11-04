@@ -14,6 +14,7 @@ def main():
     parser.add_argument("--checkpoint", required=True, type=Path)
     parser.add_argument("--training", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument('--policy-kind', choices=('cts', 'idle-finetune', 'stair-noise', 'stair-finetune'), default='cts')
     args = parser.parse_args()
     destination = args.output.resolve()
     if destination.exists():
@@ -31,7 +32,17 @@ def main():
     (destination / "STAGED_NOT_ACCEPTED.txt").write_text(
         "CTS nominal model candidate: offline parity does not authorize hardware. "
         "Mandatory landing controller contact/actuator binding is unavailable.\n")
-    record = export(args.checkpoint, args.training, destination / "models/v1")
+    exporter = export
+    if args.policy_kind == 'idle-finetune':
+        from export_cts_idle_checkpoint import export as exporter
+    elif args.policy_kind == 'stair-noise':
+        from export_cts_stair_noise_checkpoint import export as exporter
+    elif args.policy_kind == 'stair-finetune':
+        from export_cts_stair_finetune_checkpoint import export as exporter
+    record = exporter(args.checkpoint, args.training, destination / "models/v1")
+    if args.policy_kind in ('idle-finetune', 'stair-noise', 'stair-finetune'):
+        from validate_cts_bundle import validate
+        validate(destination / 'models/v1')
     # Production board preparation supplies site-local calibration and links.
     # The normal GOS mapper still publishes terrain v1; no raw-command field is
     # added to terrain messages because the operator command is AOS-local.

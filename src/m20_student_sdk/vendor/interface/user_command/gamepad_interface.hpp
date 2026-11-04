@@ -44,7 +44,7 @@ using json = nlohmann::json;
 
 class GamepadInterface : public UserCommandInterface {
 private:
-    static constexpr float kMaxForward = 1.0f;
+    static constexpr float kMaxForward = 0.7f;
     static constexpr float kMaxSide = 0.5f;
     static constexpr float kMaxYaw = 0.6f;
     std::array<std::array<float,2>,3> command_ranges_{{{-kMaxForward,kMaxForward},{-kMaxSide,kMaxSide},{-kMaxYaw,kMaxYaw}}};
@@ -76,10 +76,16 @@ public:
                     if(!std::isfinite(lo)||!std::isfinite(hi)||lo>=0||hi<=0)throw std::runtime_error("invalid finite operator command range");
                     const auto& training=config.at("command_training_ranges").at(keys[axis]);
                     if(lo<training[0].get<float>()||hi>training[1].get<float>())throw std::runtime_error("operator command range exceeds policy contract");
-                    command_ranges_[axis]={lo,hi};
+                    // Match MuJoCo teleop even when an older site config permits more.
+                    // Preserve a site's narrower range. These packets already carry
+                    // velocity commands, so clamp rather than rescale low-speed input.
+                    command_ranges_[axis]={std::max(lo,command_ranges_[axis][0]),
+                                           std::min(hi,command_ranges_[axis][1])};
                 }
             }
         }
+        std::cout << "[COMMAND_RANGES] effective=" << json(command_ranges_).dump()
+                  << "; units=m/s,m/s,rad/s; mapping=velocity_clamp" << std::endl;
         mHeartbeat_ = std::make_unique<Heartbeat>();
 
         mHandleMap_[100][100] = std::bind(&GamepadInterface::Handle_Heartbeat, this, std::placeholders::_1,

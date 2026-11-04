@@ -21,14 +21,14 @@ class StudentControlCore {
   bool publication_commit_=false,candidate_pending_=false;
 public:
   void RequirePublicationCommit(){publication_commit_=true;}
-  explicit StudentControlCore(const nlohmann::json& robot):robot_(robot),
+  explicit StudentControlCore(const nlohmann::json& robot,bool force_no_holds=false):robot_(robot),
       leg_target_slew_enabled_(robot.at("policy").value("leg_target_slew_enabled",true)),
       joint_target_position_clip_enabled_(robot.at("policy").value("joint_target_position_clip_enabled",true)),
       wheel_target_velocity_clip_enabled_(robot.at("policy").value("wheel_target_velocity_clip_enabled",true)){
     const auto& policy=robot.at("policy");
     if(policy.contains("hold_enabled")&&!policy.at("hold_enabled").is_boolean())
       throw std::runtime_error("hold_enabled must be a boolean");
-    holds_enabled_=policy.value("hold_enabled",true);
+    holds_enabled_=!force_no_holds&&policy.value("hold_enabled",true);
   }
   bool HoldsEnabled()const{return holds_enabled_;}
   types::RobotAction DiscardCandidateAndSupport(){

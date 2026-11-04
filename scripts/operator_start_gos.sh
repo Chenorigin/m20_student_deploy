@@ -2,6 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 profile=${1:-v1}
+python3 scripts/check_cts_runtime_alignment.py
 [[ "$profile" == v1 ]] || { echo "This student-v3.5 release requires profile v1 (789D)." >&2; exit 2; }
 [[ "$(cat /opt/robot/os_type)" == CA9B_GOS ]] || exit 2
 [[ "$EUID" == 0 ]] || { echo "Use sudo -E; native input verifies the root factory process." >&2; exit 2; }

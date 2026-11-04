@@ -70,6 +70,8 @@ int main(int argc,char** argv){
  unsafe=safe;unsafe.goal_joint_vel[3]=NAN;
  results["nominal_nonfinite_command_rejected"]=rejects([&]{c.ValidateTarget(unsafe);});
  results["nominal_target_validation_does_not_change_pd_or_targets"]=safe.ConvertToMat().isApprox(c.Map(std::array<float,16>{}.data(),.02).ConvertToMat());
+ StudentControlCore forced_no_hold(robot,true);forced_no_hold.Begin(seed);
+ results["forced_nohold_overrides_legacy_config_without_latching"]=!forced_no_hold.HoldsEnabled()&&rejects([&]{forced_no_hold.Hold("terrain coverage");})&&!forced_no_hold.Latched();
  // Recorded CTS500 stair-approach action, through the production core.
  auto trial=robot;trial["policy"]["leg_target_slew_enabled"]=false;
  trial["policy"]["hold_enabled"]=false;trial["policy"]["wheel_target_velocity_clip_enabled"]=false;

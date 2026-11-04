@@ -1,0 +1,521 @@
+{
+  "source_commit": "3c48813",
+  "robot": {
+    "policy": {
+      "dt_s": 0.02,
+      "leg_target_slew_enabled": false,
+      "terrain_source_session_hold_enabled": false,
+      "nominal_joint_servo_dt_s_from_training": 0.005,
+      "decimation_from_training": 4,
+      "normalized_action_clip": [
+        -100.0,
+        100.0
+      ],
+      "processed_target_clip_policy": [
+        [
+          -100.0,
+          100.0
+        ],
+        [
+          -100.0,
+          100.0
+        ],
+        [
+          -100.0,
+          100.0
+        ],
+        [
+          -100.0,
+          100.0
+        ],
+        [
+          -100.0,
+          100.0
+        ],
+        [
+          -100.0,
+          100.0
+        ],
+        [
+          -100.0,
+          100.0
+        ],
+        [
+          -100.0,
+          100.0
+        ],
+        [
+          -100.0,
+          100.0
+        ],
+        [
+          -100.0,
+          100.0
+        ],
+        [
+          -100.0,
+          100.0
+        ],
+        [
+          -100.0,
+          100.0
+        ],
+        [
+          -100.0,
+          100.0
+        ],
+        [
+          -100.0,
+          100.0
+        ],
+        [
+          -100.0,
+          100.0
+        ],
+        [
+          -100.0,
+          100.0
+        ]
+      ],
+      "previous_action": "previous issued normalized 16D action; not mapped joint target",
+      "runtime_noise_injection": false,
+      "joint_target_position_clip_enabled": false,
+      "wheel_target_velocity_clip_enabled": false,
+      "hold_enabled": false,
+      "max_tick_interval_s": 0.03
+    },
+    "observation": {
+      "scales": {
+        "base_ang_vel": 0.25,
+        "projected_gravity": 1.0,
+        "velocity_commands": 1.0,
+        "joint_pos": 1.0,
+        "joint_vel": 0.05,
+        "actions": 1.0
+      },
+      "clip": [
+        -100.0,
+        100.0
+      ],
+      "wheel_positions_zero": true
+    },
+    "joints": {
+      "policy_order": [
+        "fl_hipx_joint",
+        "fl_hipy_joint",
+        "fl_knee_joint",
+        "fr_hipx_joint",
+        "fr_hipy_joint",
+        "fr_knee_joint",
+        "hl_hipx_joint",
+        "hl_hipy_joint",
+        "hl_knee_joint",
+        "hr_hipx_joint",
+        "hr_hipy_joint",
+        "hr_knee_joint",
+        "fl_wheel_joint",
+        "fr_wheel_joint",
+        "hl_wheel_joint",
+        "hr_wheel_joint"
+      ],
+      "sdk_order": [
+        "fl_hipx_joint",
+        "fl_hipy_joint",
+        "fl_knee_joint",
+        "fl_wheel_joint",
+        "fr_hipx_joint",
+        "fr_hipy_joint",
+        "fr_knee_joint",
+        "fr_wheel_joint",
+        "hl_hipx_joint",
+        "hl_hipy_joint",
+        "hl_knee_joint",
+        "hl_wheel_joint",
+        "hr_hipx_joint",
+        "hr_hipy_joint",
+        "hr_knee_joint",
+        "hr_wheel_joint"
+      ],
+      "policy_from_sdk_indices": [
+        0,
+        1,
+        2,
+        4,
+        5,
+        6,
+        8,
+        9,
+        10,
+        12,
+        13,
+        14,
+        3,
+        7,
+        11,
+        15
+      ],
+      "sdk_from_policy_indices": [
+        0,
+        1,
+        2,
+        12,
+        3,
+        4,
+        5,
+        13,
+        6,
+        7,
+        8,
+        14,
+        9,
+        10,
+        11,
+        15
+      ],
+      "default_position_policy_rad": [
+        0.0,
+        -0.3,
+        0.6,
+        0.0,
+        -0.3,
+        0.6,
+        0.0,
+        0.3,
+        -0.6,
+        0.0,
+        0.3,
+        -0.6,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "action_scale_policy": [
+        0.125,
+        0.25,
+        0.25,
+        0.125,
+        0.25,
+        0.25,
+        0.125,
+        0.25,
+        0.25,
+        0.125,
+        0.25,
+        0.25,
+        5.0,
+        5.0,
+        5.0,
+        5.0
+      ],
+      "kp_sdk": [
+        80.0,
+        80.0,
+        80.0,
+        0.0,
+        80.0,
+        80.0,
+        80.0,
+        0.0,
+        80.0,
+        80.0,
+        80.0,
+        0.0,
+        80.0,
+        80.0,
+        80.0,
+        0.0
+      ],
+      "kd_sdk": [
+        2.0,
+        2.0,
+        2.0,
+        0.6,
+        2.0,
+        2.0,
+        2.0,
+        0.6,
+        2.0,
+        2.0,
+        2.0,
+        0.6,
+        2.0,
+        2.0,
+        2.0,
+        0.6
+      ],
+      "sdk_direction": [
+        1.0,
+        1.0,
+        -1.0,
+        1.0,
+        1.0,
+        -1.0,
+        1.0,
+        -1.0,
+        -1.0,
+        1.0,
+        -1.0,
+        1.0,
+        -1.0,
+        -1.0,
+        1.0,
+        -1.0
+      ],
+      "sdk_initial_offset_deg": [
+        -25.0,
+        -131.0,
+        160.0,
+        0.0,
+        25.0,
+        -131.0,
+        160.0,
+        0.0,
+        -25.0,
+        131.0,
+        -160.0,
+        0.0,
+        25.0,
+        131.0,
+        -160.0,
+        0.0
+      ],
+      "offset_wrap_rule": "reference M20Interface.ResetPositionOffset may adjust hipy/knee offsets by +/-360 degrees; use effective SDK values",
+      "state_formula": "q_model_sdk=q_raw*direction+offset_rad; dq_model_sdk=dq_raw*direction",
+      "command_formula": "q_raw=(q_target_model_sdk-offset_rad)*direction; dq_raw=dq_target_model_sdk*direction",
+      "sdk_api_already_applies_offset_direction": true,
+      "reference_legacy_default_position_policy_rad": [
+        0.0,
+        -0.6,
+        1.0,
+        0.0,
+        -0.6,
+        1.0,
+        0.0,
+        0.6,
+        -1.0,
+        0.0,
+        0.6,
+        -1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "reference_default_is_used": false
+    },
+    "hardware": {
+      "joint_state_topic": "/JOINTS_DATA",
+      "joint_state_type": "drdds/msg/JointsData",
+      "joint_command_topic": "/JOINTS_CMD",
+      "joint_command_type": "drdds/msg/JointsDataCmd",
+      "direct_imu_topic": "/IMU",
+      "direct_imu_type": "sensor_msgs/msg/Imu",
+      "bridged_imu_topic": "/M20_IMU_BRIDGE",
+      "bridged_imu_type": "drdds/msg/ImuData",
+      "bridged_rpy_unit": "degrees; convert once to radians",
+      "direct_quaternion_order": "xyzw",
+      "control_word_motor_control": 4,
+      "sdk_command_matrix_columns": [
+        "kp",
+        "position",
+        "kd",
+        "velocity",
+        "torque_ff"
+      ],
+      "sdk_lifecycle_can_publish_commands": true,
+      "limits_verified_on_hardware": false,
+      "joint_position_limits_sdk_rad": null,
+      "joint_velocity_limits_sdk_rad_s": null,
+      "software_position_limits_sdk_rad": [
+        [
+          -0.436,
+          0.611
+        ],
+        [
+          -2.286,
+          2.583
+        ],
+        [
+          -2.809,
+          2.792
+        ],
+        [
+          -100,
+          100
+        ],
+        [
+          -0.611,
+          0.436
+        ],
+        [
+          -2.286,
+          2.583
+        ],
+        [
+          -2.809,
+          2.792
+        ],
+        [
+          -100,
+          100
+        ],
+        [
+          -0.436,
+          0.611
+        ],
+        [
+          -2.583,
+          2.286
+        ],
+        [
+          -2.792,
+          2.809
+        ],
+        [
+          -100,
+          100
+        ],
+        [
+          -0.611,
+          0.436
+        ],
+        [
+          -2.583,
+          2.286
+        ],
+        [
+          -2.792,
+          2.809
+        ],
+        [
+          -100,
+          100
+        ]
+      ],
+      "software_velocity_limits_sdk_rad_s": [
+        10,
+        12,
+        15,
+        50,
+        10,
+        12,
+        15,
+        50,
+        10,
+        12,
+        15,
+        50,
+        10,
+        12,
+        15,
+        50
+      ],
+      "software_limit_source": "MuJoCo XML named-joint ranges are used for standing handoff and measured-state envelope only. Both additional position/velocity target clip switches are false, including the processed-target clip. Stored velocity envelopes are dormant rollback values; they are not MuJoCo target limits. Hardware/firmware effort and speed protection has not been measured.",
+      "software_feedback_position_limits_sdk_rad": [
+        [
+          -0.436,
+          0.611
+        ],
+        [
+          -2.286,
+          2.583
+        ],
+        [
+          -2.809,
+          2.792
+        ],
+        [
+          -100,
+          100
+        ],
+        [
+          -0.611,
+          0.436
+        ],
+        [
+          -2.286,
+          2.583
+        ],
+        [
+          -2.809,
+          2.792
+        ],
+        [
+          -100,
+          100
+        ],
+        [
+          -0.436,
+          0.611
+        ],
+        [
+          -2.583,
+          2.286
+        ],
+        [
+          -2.792,
+          2.809
+        ],
+        [
+          -100,
+          100
+        ],
+        [
+          -0.611,
+          0.436
+        ],
+        [
+          -2.583,
+          2.286
+        ],
+        [
+          -2.792,
+          2.809
+        ],
+        [
+          -100,
+          100
+        ]
+      ]
+    },
+    "command_training_ranges": {
+      "lin_vel_x": [
+        -2.0,
+        2.0
+      ],
+      "lin_vel_y": [
+        -1.0,
+        1.0
+      ],
+      "ang_vel_z": [
+        -2.0,
+        2.0
+      ]
+    },
+    "command_operator_ranges": {
+      "lin_vel_x": [
+        -0.7,
+        0.7
+      ],
+      "lin_vel_y": [
+        -0.5,
+        0.5
+      ],
+      "ang_vel_z": [
+        -0.6,
+        0.6
+      ]
+    }
+  },
+  "runtime": {
+    "aos": {
+      "cts_execution_mode": "nominal_pd",
+      "coverage_hold_enabled": false,
+      "terrain_timing_hold_enabled": false
+    },
+    "runtime": {
+      "mapping_region": "front"
+    }
+  }
+}

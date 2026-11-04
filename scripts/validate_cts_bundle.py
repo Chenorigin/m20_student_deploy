@@ -18,6 +18,27 @@ def validate(model_dir, check_model=True):
     if actual.get("deployment_family") != FAMILY:
         raise ValueError("Not a CTS bundle")
     deployed = json.loads((model_dir / "deployment.json").read_text())
+    if 'stair_finetune' in actual or 'stair_finetune' in deployed or deployed.get('policy_kind') == 'stair-finetune':
+        from m20_heightmap.cts_stair_finetune import SOURCE, validate_stair_finetune_contract
+        noise = validate_stair_finetune_contract(actual)
+        if (deployed.get('stair_finetune') != noise or deployed.get('policy_kind') != 'stair-finetune'
+                or deployed.get('source_state_key') != SOURCE
+                or deployed.get('checkpoint_sha256') != noise['checkpoint_sha256']):
+            raise ValueError('CTS stair-finetune bundle provenance mismatch')
+    if 'stair_noise' in actual or 'stair_noise' in deployed or deployed.get('policy_kind') == 'stair-noise':
+        from m20_heightmap.cts_stair_noise import SOURCE, validate_stair_noise_contract
+        noise = validate_stair_noise_contract(actual)
+        if (deployed.get('stair_noise') != noise or deployed.get('policy_kind') != 'stair-noise'
+                or deployed.get('source_state_key') != SOURCE
+                or deployed.get('checkpoint_sha256') != noise['checkpoint_sha256']):
+            raise ValueError('CTS stair-noise bundle provenance mismatch')
+    if 'idle_finetune' in actual or 'idle_finetune' in deployed or deployed.get('policy_kind') == 'idle-finetune':
+        from m20_heightmap.cts_idle import SOURCE, validate_idle_contract
+        idle = validate_idle_contract(actual)
+        if (deployed.get('idle_finetune') != idle or deployed.get('policy_kind') != 'idle-finetune'
+                or deployed.get('source_state_key') != SOURCE
+                or deployed.get('checkpoint_sha256') != idle['checkpoint_sha256']):
+            raise ValueError('CTS idle-head bundle provenance mismatch')
     onnx = json.loads((model_dir / "policy.onnx.json").read_text())
     for record in (deployed, onnx):
         if (record.get("deployment_family") != FAMILY or record.get("model_inputs") != INPUTS

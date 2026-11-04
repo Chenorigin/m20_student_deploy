@@ -45,7 +45,9 @@ def metadata():
     return value
 
 
-def test_cts_observation_abi_and_control_digest(tmp_path, metadata):
+@pytest.mark.parametrize('version', [VERSION, 'm20_cts_action_latent_v29'])
+def test_cts_observation_abi_and_control_digest(tmp_path, metadata, version):
+    metadata['cts_version'] = version
     path = tmp_path / "contract.json"
     path.write_text(json.dumps(metadata))
     validate_model_contract(path, contract("v1", 4))
@@ -202,10 +204,10 @@ def test_dual_input_gate_and_embedded_control(metadata, tmp_path):
         CTSInference(tmp_path / "policy.onnx", sidecar)
 
 
-@pytest.mark.parametrize("version", ["m20_cts_action_latent_v2", "m20_cts_action_latent_v8", "m20_cts_action_latent_v10", "m20_cts_action_latent_v13", "m20_cts_action_latent_v14", "m20_cts_action_latent_v15", "m20_cts_action_latent_v24"])
+@pytest.mark.parametrize("version", ["m20_cts_action_latent_v2", "m20_cts_action_latent_v8", "m20_cts_action_latent_v10", "m20_cts_action_latent_v13", "m20_cts_action_latent_v14", "m20_cts_action_latent_v15", "m20_cts_action_latent_v16", "m20_cts_action_latent_v17", "m20_cts_action_latent_v24"])
 def test_supported_training_versions_preserve_execution_guards(metadata, tmp_path, version):
     metadata["cts_version"] = version
-    if version in ('m20_cts_action_latent_v15', 'm20_cts_action_latent_v24'):
+    if version in ('m20_cts_action_latent_v15','m20_cts_action_latent_v16','m20_cts_action_latent_v17','m20_cts_action_latent_v24'):
         metadata['software_joint_limits'] = {
             'version': 1, 'normalized_action_clip': [-100., 100.],
             'joint_names': [f'{leg}_{joint}_joint' for leg in ('fl','fr','hl','hr')
@@ -228,10 +230,10 @@ def test_supported_training_versions_preserve_execution_guards(metadata, tmp_pat
         validate_model_contract(path, contract("v1", 4))
 
 
-@pytest.mark.parametrize("version", ["m20_cts_action_latent_v16", "m20_cts_action_latent_v9", "m20_cts_action_latent_v1", None])
+@pytest.mark.parametrize("version", ["m20_cts_action_latent_v18", "m20_cts_action_latent_v9", "m20_cts_action_latent_v1", None])
 def test_unvalidated_training_versions_are_rejected(metadata, tmp_path, version):
     metadata["cts_version"] = version
-    if version == 'm20_cts_action_latent_v15':
+    if version in ('m20_cts_action_latent_v15','m20_cts_action_latent_v16','m20_cts_action_latent_v17','m20_cts_action_latent_v24'):
         metadata['software_joint_limits'] = {
             'version': 1, 'normalized_action_clip': [-100., 100.],
             'joint_names': [f'{leg}_{joint}_joint' for leg in ('fl','fr','hl','hr')
@@ -248,9 +250,10 @@ def test_unvalidated_training_versions_are_rejected(metadata, tmp_path, version)
         validate_model_contract(path, contract("v1", 4))
 
 
-def test_v15_requires_software_limit_metadata(metadata):
+@pytest.mark.parametrize('version',['m20_cts_action_latent_v15','m20_cts_action_latent_v16','m20_cts_action_latent_v17'])
+def test_v15_requires_software_limit_metadata(metadata,version):
     from m20_heightmap.cts import validate_cts_contract
-    metadata['cts_version'] = 'm20_cts_action_latent_v15'
+    metadata['cts_version'] = version
     with pytest.raises(ValueError, match='software joint-limit'):
         validate_cts_contract(metadata)
 

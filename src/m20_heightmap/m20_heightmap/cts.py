@@ -11,10 +11,13 @@ import numpy as np
 
 FAMILY = "m20_cts_student"
 VERSION = "m20_cts_action_latent_v2"
-# Validated training changes through v15 preserve the nominal inference ABI.
-SUPPORTED_VERSIONS = (VERSION, "m20_cts_action_latent_v8", "m20_cts_action_latent_v10", "m20_cts_action_latent_v13", "m20_cts_action_latent_v14", "m20_cts_action_latent_v15")
+# Validated training changes through v17 preserve the nominal inference ABI.
+SUPPORTED_VERSIONS = (VERSION, "m20_cts_action_latent_v8", "m20_cts_action_latent_v10", "m20_cts_action_latent_v13", "m20_cts_action_latent_v14", "m20_cts_action_latent_v15", "m20_cts_action_latent_v16", "m20_cts_action_latent_v17")
 INPUTS = {"obs": [1, 789], "raw_command": [1, 3]}
 SUPPORTED_VERSIONS += ("m20_cts_action_latent_v24",)
+# Preserve the ordinary nominal actor already deployed on 1515 (v29).
+# Its saved contract predates the software_joint_limits metadata requirement.
+SUPPORTED_VERSIONS += ("m20_cts_action_latent_v29",)
 HARDWARE_REASON = ("CTS requires mandatory StairQuiet landing control at every 5ms substep; "
                    "the SDK has no validated contact/actuator binding. Hardware startup is blocked. "
                    "Use offline_cts.py or the training deploy_cts_student.py simulation runtime.")
@@ -31,10 +34,28 @@ def sha(path):
 
 def validate_cts_contract(actual):
     from .contract import contract
+    from .cts_idle import SCOPE, validate_idle_contract
+    from .cts_stair_noise import SCOPE as NOISE_SCOPE, validate_stair_noise_contract
+    from .cts_stair_finetune import SCOPE as STAIR_SCOPE, validate_stair_finetune_contract
+    scope = actual.get('actor_scope')
+    if sum(k in actual for k in ('idle_finetune', 'stair_noise', 'stair_finetune')) > 1:
+        raise ValueError('CTS residual identities cannot be combined')
+    if scope == SCOPE:
+        validate_idle_contract(actual)
+    elif 'idle_finetune' in actual:
+        raise ValueError('CTS idle-head metadata requires its explicit actor scope')
+    if scope == NOISE_SCOPE:
+        validate_stair_noise_contract(actual)
+    elif 'stair_noise' in actual:
+        raise ValueError('CTS stair-noise metadata requires its explicit actor scope')
+    if scope == STAIR_SCOPE:
+        validate_stair_finetune_contract(actual)
+    elif 'stair_finetune' in actual:
+        raise ValueError('CTS stair metadata requires its explicit actor scope')
     if (actual.get("deployment_family") != FAMILY or actual.get("cts_version") not in SUPPORTED_VERSIONS
             or actual.get("model_inputs") != INPUTS
             or actual.get("raw_command_semantics") != "requested_command_before_heading_feedback"
-            or actual.get("actor_scope") != "student_encoder_and_shared_decoder_nominal16"
+            or scope not in ("student_encoder_and_shared_decoder_nominal16", SCOPE, NOISE_SCOPE, STAIR_SCOPE)
             or actual.get("standalone_robot_controller") is not False
             or actual.get("history_steps") != contract("v1", 4)["history_steps"]):
         raise ValueError("CTS model input/execution contract mismatch")
@@ -59,7 +80,7 @@ def validate_cts_contract(actual):
     if perception.get("front_only") is not True:
         raise ValueError("CTS requires the saved front-only perception contract")
     front_mask(actual)
-    if actual['cts_version'] in ('m20_cts_action_latent_v15', 'm20_cts_action_latent_v24'):
+    if actual['cts_version'] in ('m20_cts_action_latent_v15','m20_cts_action_latent_v16','m20_cts_action_latent_v17','m20_cts_action_latent_v24'):
         limits = actual.get('software_joint_limits')
         if (not isinstance(limits, dict) or limits.get('version') != 1
                 or canonical_hash(limits) != actual.get('software_joint_limits_sha256')

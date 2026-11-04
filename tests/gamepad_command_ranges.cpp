@@ -6,7 +6,7 @@ using namespace interface;
 #include "gamepad_interface.hpp"
 #include <cmath>
 #include <stdexcept>
-int main(){
+int main(int argc,char** argv){
   try{
     GamepadInterface gamepad(RobotName::M20);MotionStateFeedback feedback;gamepad.SetMotionStateFeedback(&feedback);
     auto parse=[&](const json& items,int type,int command){
@@ -16,8 +16,8 @@ int main(){
       std::string reply;if(!gamepad.ParseData(in,reply))throw std::runtime_error("fixture rejected by actual gamepad parser");
     };
     parse(json::object(),100,100);
-    int checks=0;const float limits[]={.7f,.5f,.6f};const char* keys[]={"X","Y","Yaw"};
-    for(int axis=0;axis<3;++axis)for(float value:{-10.f,-.25f,.25f,10.f}){
+    int checks=0;const float limits[]={argc==4?std::stof(argv[1]):.7f,argc==4?std::stof(argv[2]):.5f,argc==4?std::stof(argv[3]):.6f};const char* keys[]={"X","Y","Yaw"};
+    for(int axis=0;axis<3;++axis)for(float value:{-10.f,-1.f,-.25f,0.f,.25f,1.f,10.f}){
       json items={{"X",0.f},{"Y",0.f},{"Yaw",0.f}};items[keys[axis]]=value;parse(items,2,21);
       const auto* c=gamepad.GetUserCommand();const float actual[]={c->forward_vel_scale,c->side_vel_scale,c->turnning_vel_scale};
       for(int j=0;j<3;++j){const float expected=j==axis?std::clamp(value,-limits[j],limits[j]):0.f;

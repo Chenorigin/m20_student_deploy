@@ -2,6 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 profile=${1:-v1}
+python3 scripts/check_cts_runtime_alignment.py
 [[ "$profile" == v1 ]] || { echo "This student-v3.5 release requires profile v1 (789D)." >&2; exit 2; }
 startup=${2:-strict}
 python3 scripts/check_execution_runtime.py --contract "models/$profile/observation_contract.json" \

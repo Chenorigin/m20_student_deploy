@@ -27,6 +27,11 @@ def load_actor(checkpoint, training):
 
 
 def export(checkpoint, training, output):
+    return export_actor_bundle(checkpoint, training, output, load_actor)
+
+
+def export_actor_bundle(checkpoint, training, output, actor_loader):
+    """Shared CTS serialization/parity pipeline; the loader owns source validation."""
     import torch
     from export_cts_onnx import export_onnx
     torch.set_num_threads(1)
@@ -34,7 +39,7 @@ def export(checkpoint, training, output):
     if output.exists() and any(output.iterdir()):
         raise ValueError("CTS export requires a new/empty model directory")
     checkpoint_sha = sha(checkpoint)
-    actor, meta, control = load_actor(checkpoint, training)
+    actor, meta, control = actor_loader(checkpoint, training)
     actual = deepcopy(meta["contract"])
     actual.update(deployment_family=FAMILY, cts_version=meta["version"], model_inputs=INPUTS,
                   raw_command_semantics="requested_command_before_heading_feedback",
@@ -46,6 +51,18 @@ def export(checkpoint, training, output):
     if 'joint_limits' in meta['config']:
         actual['software_joint_limits'] = deepcopy(meta['config']['joint_limits'])
         actual['software_joint_limits_sha256'] = canonical_hash(actual['software_joint_limits'])
+    if 'idle_finetune' in meta:
+        from m20_heightmap.cts_idle import SCOPE
+        actual['actor_scope'] = SCOPE
+        actual['idle_finetune'] = deepcopy(meta['idle_finetune'])
+    if 'stair_noise' in meta:
+        from m20_heightmap.cts_stair_noise import SCOPE
+        actual['actor_scope'] = SCOPE
+        actual['stair_noise'] = deepcopy(meta['stair_noise'])
+    if 'stair_finetune' in meta:
+        from m20_heightmap.cts_stair_finetune import SCOPE
+        actual['actor_scope'] = SCOPE
+        actual['stair_finetune'] = deepcopy(meta['stair_finetune'])
     if actual["quiet_execution_control_sha256"] != meta["quiet_execution_control_sha256"]:
         raise ValueError("Saved CTS execution digest mismatch")
     output.mkdir(parents=True, exist_ok=True)
@@ -79,6 +96,18 @@ def export(checkpoint, training, output):
               "standalone_robot_controller": False, "hardware_commands": 0,
               "export_check": {"samples": 128, "max_abs_error": float((observed-expected).abs().max()),
                                "device": "cpu"}}
+    if 'idle_finetune' in actual:
+        record['idle_finetune'] = deepcopy(actual['idle_finetune'])
+        record['source_state_key'] = actual['idle_finetune']['source_state_key']
+        record['policy_kind'] = 'idle-finetune'
+    if 'stair_noise' in actual:
+        record['stair_noise'] = deepcopy(actual['stair_noise'])
+        record['source_state_key'] = actual['stair_noise']['source_state_key']
+        record['policy_kind'] = 'stair-noise'
+    if 'stair_finetune' in actual:
+        record['stair_finetune'] = deepcopy(actual['stair_finetune'])
+        record['source_state_key'] = actual['stair_finetune']['source_state_key']
+        record['policy_kind'] = 'stair-finetune'
     (output / "deployment.json").write_text(json.dumps(record, indent=2) + "\n")
     export_onnx(path, sidecar, output / "policy.onnx")
     return record
